@@ -92,11 +92,7 @@ const Login = () => {
               Acceso seguro a tu cuenta
             </p>
 
-            <h2 className="text-4xl xl:text-5xl font-bold leading-tight text-white">
-              Vive la emoción de tu quiniela con una experiencia más profesional.
-            </h2>
-
-            <p className="mt-5 text-base xl:text-lg text-slate-300 leading-relaxed">
+           <p className="mt-5 text-base xl:text-lg text-slate-300 leading-relaxed">
               Ingresa para administrar tus predicciones, revisar posiciones, competir con tus amigos
               y seguir cada partido de una forma simple y moderna.
             </p>
