@@ -169,7 +169,7 @@ const Login = () => {
                     />
                   </div>
                 </div>
-
+{/* <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link> */}
                 {/* Contraseña */}
                 <div>
                   <div className="mb-2 flex items-center justify-between">
