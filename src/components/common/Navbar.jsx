@@ -18,12 +18,19 @@ const Navbar = () => {
     <nav className="bg-indigo-600 text-white shadow-lg">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="text-xl font-bold">
-            Quiniela App
+          {/* Logo y nombre de la empresa */}
+          <Link to="/" className="flex items-center space-x-2">
+            <img 
+              src="/logo.png"   // ← Logo PNG en public/logo.png
+              alt="Lucalza"
+              className="h-8 w-auto"
+            />
+            <span className="text-xl font-bold">Quiniela Lucalza</span>
           </Link>
 
+          {/* Menú de navegación (comentado por ahora) */}
           <div className="flex space-x-4">
-            <Link to="/" className="flex items-center space-x-1 hover:text-indigo-200">
+            {/* <Link to="/" className="flex items-center space-x-1 hover:text-indigo-200">
               <Home className="h-4 w-4" />
               <span>Inicio</span>
             </Link>
@@ -34,8 +41,8 @@ const Navbar = () => {
             <Link to="/mis-predicciones" className="flex items-center space-x-1 hover:text-indigo-200">
               <Calendar className="h-4 w-4" />
               <span>Mis Predicciones</span>
-            </Link>
-            {isAdmin() && (  // ← Cambiado: isAdmin() como función
+            </Link> */}
+            {isAdmin() && (
               <Link to="/admin" className="flex items-center space-x-1 hover:text-indigo-200">
                 <Shield className="h-4 w-4" />
                 <span>Admin</span>
@@ -43,6 +50,7 @@ const Navbar = () => {
             )}
           </div>
 
+          {/* Usuario y logout */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <User className="h-4 w-4" />
