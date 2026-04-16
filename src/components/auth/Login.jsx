@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { FaInstagram, FaFacebook, FaTiktok, FaLinkedin } from "react-icons/fa";
 import {
   LogIn,
   Mail,
@@ -11,6 +12,7 @@ import {
   ShieldCheck,
   ChevronRight,
 } from 'lucide-react';
+
 
 const Login = () => {
   const { login } = useAuth();
@@ -24,6 +26,33 @@ const Login = () => {
     u_correo: '',
     u_password: '',
   });
+
+  const socialLinks = [
+    {
+      name: 'Instagram',
+      url: 'https://www.instagram.com/lucalzaguatemala/?hl=es-la',
+      icon: FaInstagram,
+      color: 'hover:bg-pink-600',
+    },
+    {
+      name: 'Facebook',
+      url: 'https://www.facebook.com/lucalzaguate/?locale=es_LA',
+      icon: FaFacebook,
+      color: 'hover:bg-blue-600',
+    },
+    {
+      name: 'TikTok',
+      url: 'https://www.tiktok.com/@grupolucalza',
+      icon: FaTiktok,
+      color: 'hover:bg-black',
+    },
+    {
+      name: 'LinkedIn',
+      url: 'https://www.linkedin.com/company/grupo-lucalza/posts/?feedView=all',
+      icon: FaLinkedin,
+      color: 'hover:bg-blue-700',
+    },
+  ];
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -92,7 +121,7 @@ const Login = () => {
               Acceso seguro a tu cuenta
             </p>
 
-           <p className="mt-5 text-base xl:text-lg text-slate-300 leading-relaxed">
+            <p className="mt-5 text-base xl:text-lg text-slate-300 leading-relaxed">
               Ingresa para administrar tus predicciones, revisar posiciones, competir con tus amigos
               y seguir cada partido de una forma simple y moderna.
             </p>
@@ -105,6 +134,28 @@ const Login = () => {
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
                 <p className="text-sm text-slate-300">Ranking</p>
                 <p className="mt-1 text-2xl font-bold text-white">Competitivo</p>
+              </div>
+            </div>
+
+            {/* Redes Sociales en panel izquierdo */}
+            <div className="mt-8 pt-4 border-t border-white/10">
+              <p className="text-sm text-slate-400 mb-3">Síguenos en redes</p>
+              <div className="flex gap-3">
+                {socialLinks.map((social) => (
+                  <a
+                    key={social.name}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`group relative rounded-full bg-white/10 p-2.5 backdrop-blur-md transition-all duration-300 hover:scale-110 ${social.color}`}
+                    title={social.name}
+                  >
+                    <social.icon className="h-5 w-5 text-white transition-transform group-hover:scale-110" />
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-800 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none">
+                      {social.name}
+                    </span>
+                  </a>
+                ))}
               </div>
             </div>
           </div>
@@ -179,7 +230,6 @@ const Login = () => {
                     >
                       Contraseña
                     </label>
-
                   </div>
 
                   <div className="relative">
@@ -259,11 +309,30 @@ const Login = () => {
                     </Link>
                   </p>
                 </div>
+
+                {/* Redes Sociales en móvil */}
+                <div className="mt-6 pt-4 border-t border-slate-200 lg:hidden">
+                  <p className="text-center text-sm text-slate-600 mb-3">Síguenos en redes</p>
+                  <div className="flex justify-center gap-4">
+                    {socialLinks.map((social) => (
+                      <a
+                        key={social.name}
+                        href={social.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`rounded-full bg-slate-100 p-2.5 transition-all duration-300 hover:scale-110 ${social.color} hover:text-white`}
+                        title={social.name}
+                      >
+                        <social.icon className="h-5 w-5 text-slate-700 transition-colors group-hover:text-white" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               </form>
             </div>
 
             <p className="mt-6 text-center text-xs text-slate-400 lg:hidden">
-              Quiniela Lucalza · Mundial 2026
+              Quiniela Lucalza · Lucalza
             </p>
           </div>
         </div>
