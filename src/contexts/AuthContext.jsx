@@ -49,8 +49,8 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         register,
-        isAdmin,           // ← Ahora es una función
-        isAuthenticated,   // ← Ahora es una función
+        isAdmin,           
+        isAuthenticated,   
       }}
     >
       {children}
