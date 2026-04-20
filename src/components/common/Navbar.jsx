@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Shield } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -78,6 +78,19 @@ const Navbar = () => {
               </span>
             </Link>
 
+            {/* Menú de administrador - solo visible para admins en desktop */}
+            {isAdmin() && (
+              <div className="hidden md:flex items-center space-x-4">
+                <Link 
+                  to="/admin" 
+                  className="flex items-center space-x-1 hover:text-indigo-200 transition-colors"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>Admin</span>
+                </Link>
+              </div>
+            )}
+
             {/* Menú de usuario - solo silueta */}
             <div className="relative" ref={userMenuRef}>
               <button
@@ -100,6 +113,22 @@ const Navbar = () => {
                     </p>
                   </div>
                   <div className="py-1">
+                    {/* Panel de administrador - solo visible para admins */}
+                    {isAdmin() && (
+                      <>
+                        <Link
+                          to="/admin"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Shield className="h-4 w-4" />
+                            <span>Panel de Administrador</span>
+                          </div>
+                        </Link>
+                        <div className="border-t border-gray-200"></div>
+                      </>
+                    )}
                     {/* <Link
                       to="/perfil"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

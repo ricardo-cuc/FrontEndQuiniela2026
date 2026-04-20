@@ -23,7 +23,7 @@ const ResultadosPage = () => {
       setQuiniela(quinielaEncontrada);
 
       // Cargar partidos pendientes
-      const partidosRes = await api.get(`/api/partidos/pendientes/quiniela/${id}`);
+      const partidosRes = await api.get(`/api/partidos/quiniela/${id}`);
       setPartidos(partidosRes.data.data || []);
     } catch (error) {
       toast.error('Error al cargar los datos');

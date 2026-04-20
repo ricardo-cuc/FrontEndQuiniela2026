@@ -16,6 +16,11 @@ const QuinielaDetallePage = () => {
   const [enviando, setEnviando] = useState({});
   const [resultadosPendientes, setResultadosPendientes] = useState({});
   const [prediccionesBloqueadas, setPrediccionesBloqueadas] = useState(false);
+  
+  // Estados para controlar envíos múltiples
+  const [isSubmittingPartido, setIsSubmittingPartido] = useState(false);
+  const [isSubmittingGrupo, setIsSubmittingGrupo] = useState(false);
+  
   const [nuevoPartido, setNuevoPartido] = useState({
     c_equipo_1: '',
     c_equipo_2: '',
@@ -150,8 +155,27 @@ const QuinielaDetallePage = () => {
     });
   };
 
+  // Función para cerrar modal de partido
+  const cerrarModalPartido = () => {
+    if (!isSubmittingPartido) {
+      setShowModal(false);
+      setNuevoPartido({ c_equipo_1: '', c_equipo_2: '', fecha: '', id_grupo: '' });
+    }
+  };
+
+  // Función para cerrar modal de grupo
+  const cerrarModalGrupo = () => {
+    if (!isSubmittingGrupo) {
+      setShowGrupoModal(false);
+      setNuevoGrupo({ nombre: '' });
+    }
+  };
+
   const crearGrupo = async (e) => {
     e.preventDefault();
+    
+    // Evitar envíos múltiples
+    if (isSubmittingGrupo) return;
     
     if (!nuevoGrupo.nombre) {
       toast.error('El nombre del grupo es requerido');
@@ -162,6 +186,8 @@ const QuinielaDetallePage = () => {
       toast.error('No se pudo identificar la quiniela');
       return;
     }
+
+    setIsSubmittingGrupo(true);
 
     try {
       await api.post('/api/grupos', {
@@ -175,11 +201,16 @@ const QuinielaDetallePage = () => {
       await cargarDatos();
     } catch (error) {
       toast.error(error.response?.data?.mensaje || 'Error al crear grupo');
+    } finally {
+      setIsSubmittingGrupo(false);
     }
   };
 
   const crearPartido = async (e) => {
     e.preventDefault();
+    
+    // Evitar envíos múltiples
+    if (isSubmittingPartido) return;
     
     if (!nuevoPartido.c_equipo_1 || !nuevoPartido.c_equipo_2) {
       toast.error('Completa todos los campos requeridos');
@@ -201,6 +232,8 @@ const QuinielaDetallePage = () => {
       return;
     }
 
+    setIsSubmittingPartido(true);
+
     try {
       await api.post('/api/partidos', {
         c_campeonato: quiniela.C_CAMPEONATO,
@@ -218,6 +251,8 @@ const QuinielaDetallePage = () => {
     } catch (error) {
       const mensaje = error.response?.data?.message || error.response?.data?.mensaje || 'Error al crear partido';
       toast.error(mensaje);
+    } finally {
+      setIsSubmittingPartido(false);
     }
   };
 
@@ -376,13 +411,17 @@ const QuinielaDetallePage = () => {
         </div>
       )}
 
-      {/* MODAL PARA CREAR PARTIDO */}
+      {/* MODAL PARA CREAR PARTIDO - ACTUALIZADO */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Nuevo Partido</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button 
+                onClick={cerrarModalPartido} 
+                className="text-gray-400 hover:text-gray-600"
+                disabled={isSubmittingPartido}
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -409,7 +448,8 @@ const QuinielaDetallePage = () => {
                   required
                   value={nuevoPartido.c_equipo_1}
                   onChange={handleNuevoPartidoChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={isSubmittingPartido}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Selecciona un equipo</option>
                   {equipos.map((equipo) => (
@@ -432,7 +472,8 @@ const QuinielaDetallePage = () => {
                   required
                   value={nuevoPartido.c_equipo_2}
                   onChange={handleNuevoPartidoChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={isSubmittingPartido}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Selecciona un equipo</option>
                   {equipos.map((equipo) => (
@@ -453,7 +494,8 @@ const QuinielaDetallePage = () => {
                     required
                     value={nuevoPartido.id_grupo}
                     onChange={handleNuevoPartidoChange}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    disabled={isSubmittingPartido}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Selecciona un grupo</option>
                     {grupos.map((grupo) => (
@@ -465,7 +507,8 @@ const QuinielaDetallePage = () => {
                   <button
                     type="button"
                     onClick={() => setShowGrupoModal(true)}
-                    className="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 flex items-center gap-1"
+                    disabled={isSubmittingPartido}
+                    className="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 flex items-center gap-1 disabled:bg-green-400 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-4 w-4" /> Nuevo
                   </button>
@@ -486,23 +529,30 @@ const QuinielaDetallePage = () => {
                   name="fecha"
                   value={nuevoPartido.fecha}
                   onChange={handleNuevoPartidoChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={isSubmittingPartido}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                 />
               </div>
 
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={cerrarModalPartido}
+                  disabled={isSubmittingPartido}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  disabled={isSubmittingPartido}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    isSubmittingPartido 
+                      ? 'bg-indigo-400 cursor-not-allowed' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
-                  Crear Partido
+                  {isSubmittingPartido ? 'Creando...' : 'Crear Partido'}
                 </button>
               </div>
             </form>
@@ -510,13 +560,17 @@ const QuinielaDetallePage = () => {
         </div>
       )}
 
-      {/* MODAL PARA CREAR GRUPO */}
+      {/* MODAL PARA CREAR GRUPO - ACTUALIZADO */}
       {showGrupoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Nuevo Grupo</h2>
-              <button onClick={() => setShowGrupoModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button 
+                onClick={cerrarModalGrupo} 
+                className="text-gray-400 hover:text-gray-600"
+                disabled={isSubmittingGrupo}
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -531,7 +585,8 @@ const QuinielaDetallePage = () => {
                   required
                   value={nuevoGrupo.nombre}
                   onChange={handleNuevoGrupoChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={isSubmittingGrupo}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                   placeholder="Ej: A, B, C, D"
                   autoFocus
                 />
@@ -542,16 +597,22 @@ const QuinielaDetallePage = () => {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowGrupoModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={cerrarModalGrupo}
+                  disabled={isSubmittingGrupo}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  disabled={isSubmittingGrupo}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    isSubmittingGrupo 
+                      ? 'bg-indigo-400 cursor-not-allowed' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
-                  Crear Grupo
+                  {isSubmittingGrupo ? 'Creando...' : 'Crear Grupo'}
                 </button>
               </div>
             </form>
