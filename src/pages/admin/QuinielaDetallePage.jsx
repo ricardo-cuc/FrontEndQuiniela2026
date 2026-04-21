@@ -44,7 +44,8 @@ const QuinielaDetallePage = () => {
       setQuiniela(quinielaEncontrada);
       
       if (quinielaEncontrada) {
-        setPrediccionesBloqueadas(quinielaEncontrada.PREDICCIONES_BLOQUEADAS === 1);
+        // Usar PREDICCIONES_BLOQUEADAS (puede ser 1/0 o true/false)
+        setPrediccionesBloqueadas(quinielaEncontrada.PREDICCIONES_BLOQUEADAS === 1 || quinielaEncontrada.PREDICCIONES_BLOQUEADAS === true);
       }
 
       // Cargar partidos
@@ -174,7 +175,6 @@ const QuinielaDetallePage = () => {
   const crearGrupo = async (e) => {
     e.preventDefault();
     
-    // Evitar envíos múltiples
     if (isSubmittingGrupo) return;
     
     if (!nuevoGrupo.nombre) {
@@ -209,7 +209,6 @@ const QuinielaDetallePage = () => {
   const crearPartido = async (e) => {
     e.preventDefault();
     
-    // Evitar envíos múltiples
     if (isSubmittingPartido) return;
     
     if (!nuevoPartido.c_equipo_1 || !nuevoPartido.c_equipo_2) {
@@ -321,6 +320,24 @@ const QuinielaDetallePage = () => {
           </div>
         </div>
       </div>
+
+      {/* BANNER DE PREDICCIONES BLOQUEADAS */}
+      {prediccionesBloqueadas && (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+          <div className="flex items-center">
+            <Lock className="h-5 w-5 text-red-500 mr-2" />
+            <div>
+              <p className="text-red-700 font-semibold">Predicciones Bloqueadas</p>
+              <p className="text-red-600 text-sm">
+                Esta quiniela tiene las predicciones bloqueadas. Los usuarios no pueden hacer nuevas predicciones.
+                {quiniela?.FECHA_LIMITE_PREDICCIONES && (
+                  <> Fecha límite establecida: {new Date(quiniela.FECHA_LIMITE_PREDICCIONES).toLocaleString()}</>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end mb-6">
         <button
