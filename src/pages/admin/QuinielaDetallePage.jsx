@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/admin/QuinielaDetallePage.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Trophy, Calendar, PlusCircle, CheckCircle, Save, Clock, Users, X, Plus, Lock, Unlock } from 'lucide-react';
+import { ArrowLeft, Trophy, Calendar, PlusCircle, CheckCircle, Save, Clock, Users, X, Plus, Lock, Unlock, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -11,13 +12,13 @@ const QuinielaDetallePage = () => {
   const [equipos, setEquipos] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showGrupoModal, setShowGrupoModal] = useState(false);
   const [enviando, setEnviando] = useState({});
   const [resultadosPendientes, setResultadosPendientes] = useState({});
   const [prediccionesBloqueadas, setPrediccionesBloqueadas] = useState(false);
   
-  // Estados para controlar envíos múltiples
   const [isSubmittingPartido, setIsSubmittingPartido] = useState(false);
   const [isSubmittingGrupo, setIsSubmittingGrupo] = useState(false);
   
@@ -31,77 +32,116 @@ const QuinielaDetallePage = () => {
     nombre: ''
   });
 
+  // ============================================
+  // CARGA INICIAL
+  // ============================================
   useEffect(() => {
     cargarDatos();
   }, [id]);
 
-  const cargarDatos = async () => {
+  // ============================================
+  // CARGA DE DATOS
+  // ============================================
+  const cargarDatos = async (mostrarLoading = true) => {
     try {
-      // 🔥 USAR ENDPOINT PÚBLICO (no requiere inscripción)
-      const quinielasRes = await api.get('/api/quinielas');
-      const quinielaEncontrada = quinielasRes.data.data?.find(q => q.ID_QUINIELA === parseInt(id));
-      console.log('📋 Quiniela encontrada:', quinielaEncontrada);
-      setQuiniela(quinielaEncontrada);
-      
-      if (quinielaEncontrada) {
-        // Usar PREDICCIONES_BLOQUEADAS (puede ser 1/0 o true/false)
-        setPrediccionesBloqueadas(quinielaEncontrada.PREDICCIONES_BLOQUEADAS === 1 || quinielaEncontrada.PREDICCIONES_BLOQUEADAS === true);
-      }
-
-      // Cargar partidos
-      const partidosRes = await api.get(`/api/partidos/quiniela/${id}`);
-      console.log('📊 Partidos cargados:', partidosRes.data.data);
-      setPartidos(partidosRes.data.data || []);
-
-      // 🔥 CARGAR EQUIPOS USANDO EL CAMPEONATO DE LA QUINIELA
-      if (quinielaEncontrada && quinielaEncontrada.C_CAMPEONATO) {
-        const campeonato = quinielaEncontrada.C_CAMPEONATO;
-        console.log('📡 Cargando equipos para campeonato (desde quiniela):', campeonato);
-        try {
-          const equiposRes = await api.get(`/api/equipos/campeonato/${campeonato}`);
-          console.log('✅ Equipos cargados:', equiposRes.data.data);
-          setEquipos(equiposRes.data.data || []);
-        } catch (error) {
-          console.error('Error cargando equipos:', error);
-          setEquipos([]);
-        }
+      if (mostrarLoading) {
+        setLoading(true);
       } else {
-        console.warn('⚠️ No se pudo obtener el campeonato de la quiniela');
+        setRefreshing(true);
       }
-
-      // Cargar grupos
-      try {
-        console.log('📡 Cargando grupos para quiniela:', id);
-        const gruposRes = await api.get(`/api/grupos/quiniela/${id}`);
-        console.log('✅ Grupos cargados:', gruposRes.data.data);
-        setGrupos(gruposRes.data.data || []);
-      } catch (error) {
-        console.log('❌ No se pudieron cargar los grupos:', error);
-        setGrupos([]);
+      
+      const response = await api.get(`/api/admin/quinielas/${id}/detalle`);
+      const data = response.data.data;
+      
+      console.log('📦 Datos completos:', {
+        quiniela: !!data.quiniela,
+        equipos: data.equipos?.length || 0,
+        grupos: data.grupos?.length || 0
+      });
+      
+      // 1. Datos de la quiniela
+      if (data.quiniela) {
+        setQuiniela(data.quiniela);
+        setPrediccionesBloqueadas(data.quiniela.PREDICCIONES_BLOQUEADAS === true);
       }
-
+      
+      // 2. Equipos
+      if (data.equipos && Array.isArray(data.equipos)) {
+        setEquipos(data.equipos);
+      }
+      
+      // 3. Grupos y partidos
+      if (data.grupos && Array.isArray(data.grupos)) {
+        setGrupos(data.grupos);
+        
+        // Extraer todos los partidos de los grupos
+        const todosPartidos = [];
+        data.grupos.forEach(grupo => {
+          if (grupo.partidos && Array.isArray(grupo.partidos)) {
+            grupo.partidos.forEach(partido => {
+              todosPartidos.push({
+                ...partido,
+                NOMBRE_GRUPO: grupo.NOMBRE,
+                ID_GRUPO: grupo.ID_GRUPO
+              });
+            });
+          }
+        });
+        setPartidos(todosPartidos);
+      }
+      
     } catch (error) {
+      console.error('❌ Error al cargar datos:', error);
       toast.error('Error al cargar datos');
-      console.error(error);
     } finally {
-      setLoading(false);
+      if (mostrarLoading) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
   };
 
+  // ============================================
+  // REFRESCAR DATOS (SIN RECARGAR PÁGINA)
+  // ============================================
+  const refreshData = useCallback(() => {
+    cargarDatos(false);
+  }, [id]);
+
+  // ============================================
+  // TOGGLE BLOQUEO DE PREDICCIONES
+  // ============================================
   const toggleBloqueoPredicciones = async () => {
     const nuevoEstado = !prediccionesBloqueadas;
+    
     try {
       await api.put(`/api/admin/quinielas/${id}/bloquear-predicciones`, {
         bloquear: nuevoEstado
       });
+      
+      // Actualización local inmediata
       setPrediccionesBloqueadas(nuevoEstado);
+      if (quiniela) {
+        setQuiniela({
+          ...quiniela,
+          PREDICCIONES_BLOQUEADAS: nuevoEstado
+        });
+      }
+      
       toast.success(nuevoEstado ? '🔒 Predicciones bloqueadas' : '🔓 Predicciones desbloqueadas');
-      await cargarDatos();
+      
+      // Recargar datos en segundo plano
+      setTimeout(() => refreshData(), 500);
+      
     } catch (error) {
       toast.error(error.response?.data?.mensaje || 'Error al cambiar estado');
     }
   };
 
+  // ============================================
+  // REGISTRAR RESULTADO (ACTUALIZACIÓN LOCAL)
+  // ============================================
   const handleResultadoChange = (partidoId, campo, valor) => {
     setResultadosPendientes(prev => ({
       ...prev,
@@ -127,15 +167,31 @@ const QuinielaDetallePage = () => {
         q_goles_e1: resultado.GOLES_LOCAL,
         q_goles_e2: resultado.GOLES_VISITANTE
       });
-      toast.success(`Resultado registrado: ${partido.EQUIPO_1_NOMBRE} ${resultado.GOLES_LOCAL} - ${resultado.GOLES_VISITANTE} ${partido.EQUIPO_2_NOMBRE}`);
       
+      toast.success(`✅ Resultado registrado: ${partido.EQUIPO_1_NOMBRE} ${resultado.GOLES_LOCAL} - ${resultado.GOLES_VISITANTE} ${partido.EQUIPO_2_NOMBRE}`);
+      
+      // Actualización local inmediata
+      setPartidos(prev => prev.map(p => 
+        p.NRO_PARTIDO === partido.NRO_PARTIDO 
+          ? { 
+              ...p, 
+              GOLES_REALES_LOCAL: resultado.GOLES_LOCAL,
+              GOLES_REALES_VISITANTE: resultado.GOLES_VISITANTE,
+              ESTADO_PARTIDO: 'FINALIZADO'
+            }
+          : p
+      ));
+      
+      // Limpiar resultados pendientes
       setResultadosPendientes(prev => {
         const newState = { ...prev };
         delete newState[partido.NRO_PARTIDO];
         return newState;
       });
       
-      await cargarDatos();
+      // Recargar datos en segundo plano (silencioso)
+      setTimeout(() => refreshData(), 500);
+      
     } catch (error) {
       toast.error(error.response?.data?.mensaje || 'Error al registrar resultado');
     } finally {
@@ -143,35 +199,9 @@ const QuinielaDetallePage = () => {
     }
   };
 
-  const handleNuevoPartidoChange = (e) => {
-    setNuevoPartido({
-      ...nuevoPartido,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleNuevoGrupoChange = (e) => {
-    setNuevoGrupo({
-      nombre: e.target.value
-    });
-  };
-
-  // Función para cerrar modal de partido
-  const cerrarModalPartido = () => {
-    if (!isSubmittingPartido) {
-      setShowModal(false);
-      setNuevoPartido({ c_equipo_1: '', c_equipo_2: '', fecha: '', id_grupo: '' });
-    }
-  };
-
-  // Función para cerrar modal de grupo
-  const cerrarModalGrupo = () => {
-    if (!isSubmittingGrupo) {
-      setShowGrupoModal(false);
-      setNuevoGrupo({ nombre: '' });
-    }
-  };
-
+  // ============================================
+  // CREAR GRUPO
+  // ============================================
   const crearGrupo = async (e) => {
     e.preventDefault();
     
@@ -195,10 +225,14 @@ const QuinielaDetallePage = () => {
         c_campeonato: quiniela.C_CAMPEONATO,
         id_quiniela: parseInt(id)
       });
-      toast.success(`Grupo "${nuevoGrupo.nombre}" creado exitosamente`);
+      
+      toast.success(`✅ Grupo "${nuevoGrupo.nombre}" creado exitosamente`);
       setShowGrupoModal(false);
       setNuevoGrupo({ nombre: '' });
-      await cargarDatos();
+      
+      // Recargar datos en segundo plano
+      setTimeout(() => refreshData(), 500);
+      
     } catch (error) {
       toast.error(error.response?.data?.mensaje || 'Error al crear grupo');
     } finally {
@@ -206,6 +240,9 @@ const QuinielaDetallePage = () => {
     }
   };
 
+  // ============================================
+  // CREAR PARTIDO
+  // ============================================
   const crearPartido = async (e) => {
     e.preventDefault();
     
@@ -243,10 +280,14 @@ const QuinielaDetallePage = () => {
         id_fase: null,
         actualizado_por: '00656'
       });
-      toast.success('Partido creado exitosamente');
+      
+      toast.success('✅ Partido creado exitosamente');
       setShowModal(false);
       setNuevoPartido({ c_equipo_1: '', c_equipo_2: '', fecha: '', id_grupo: '' });
-      await cargarDatos();
+      
+      // Recargar datos en segundo plano
+      setTimeout(() => refreshData(), 500);
+      
     } catch (error) {
       const mensaje = error.response?.data?.message || error.response?.data?.mensaje || 'Error al crear partido';
       toast.error(mensaje);
@@ -255,10 +296,41 @@ const QuinielaDetallePage = () => {
     }
   };
 
+  // Handlers para modales
+  const handleNuevoPartidoChange = (e) => {
+    setNuevoPartido({
+      ...nuevoPartido,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleNuevoGrupoChange = (e) => {
+    setNuevoGrupo({
+      nombre: e.target.value
+    });
+  };
+
+  const cerrarModalPartido = () => {
+    if (!isSubmittingPartido) {
+      setShowModal(false);
+      setNuevoPartido({ c_equipo_1: '', c_equipo_2: '', fecha: '', id_grupo: '' });
+    }
+  };
+
+  const cerrarModalGrupo = () => {
+    if (!isSubmittingGrupo) {
+      setShowGrupoModal(false);
+      setNuevoGrupo({ nombre: '' });
+    }
+  };
+
+  // ============================================
+  // RENDERIZADO CONDICIONAL
+  // ============================================
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Cargando...</div>
+        <div className="text-gray-500">Cargando datos de la quiniela...</div>
       </div>
     );
   }
@@ -269,20 +341,29 @@ const QuinielaDetallePage = () => {
   const fechaInicio = quiniela?.FECHA_INICIO ? new Date(quiniela.FECHA_INICIO) : new Date();
   const fechaFin = quiniela?.FECHA_FIN ? new Date(quiniela.FECHA_FIN) : new Date();
 
-  const partidosPendientes = partidos.filter(p => p.Q_GOLES_E1 === null);
-  const partidosFinalizados = partidos.filter(p => p.Q_GOLES_E1 !== null);
-
-  console.log('🎯 Estado final - equipos:', equipos.length);
-  console.log('🎯 Estado final - grupos:', grupos.length);
+  const partidosPendientes = partidos.filter(p => p.GOLES_REALES_LOCAL === null || p.GOLES_REALES_LOCAL === undefined);
+  const partidosFinalizados = partidos.filter(p => p.GOLES_REALES_LOCAL !== null && p.GOLES_REALES_LOCAL !== undefined);
 
   return (
     <div>
-      <Link to="/admin/campeonatos" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        Volver a Campeonatos
-      </Link>
+      {/* Header con botón de refresh */}
+      <div className="flex justify-between items-center mb-6">
+        <Link to="/admin/campeonatos" className="inline-flex items-center text-indigo-600 hover:text-indigo-800">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Volver a Campeonatos
+        </Link>
+        
+        <button
+          onClick={refreshData}
+          disabled={refreshing}
+          className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="text-sm">{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
+        </button>
+      </div>
 
-      {/* HEADER ACTUALIZADO CON ESTADO DE BLOQUEO */}
+      {/* Header de la quiniela */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -292,7 +373,6 @@ const QuinielaDetallePage = () => {
               <span>📅 {fechaInicio.toLocaleDateString()} - {fechaFin.toLocaleDateString()}</span>
               <span>🏆 {quinielaCampeonato}</span>
               <span>⭐ Estado quiniela: {quinielaEstado}</span>
-              {/* 🔥 ESTADO DE BLOQUEO DE PREDICCIONES */}
               <span className={`${prediccionesBloqueadas ? 'bg-red-500' : 'bg-green-500'} px-2 py-0.5 rounded-full text-xs font-semibold`}>
                 {prediccionesBloqueadas ? '🔒 PREDICCIONES BLOQUEADAS' : '🔓 PREDICCIONES ABIERTAS'}
               </span>
@@ -321,7 +401,6 @@ const QuinielaDetallePage = () => {
         </div>
       </div>
 
-      {/* BANNER DE PREDICCIONES BLOQUEADAS */}
       {prediccionesBloqueadas && (
         <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
           <div className="flex items-center">
@@ -330,9 +409,6 @@ const QuinielaDetallePage = () => {
               <p className="text-red-700 font-semibold">Predicciones Bloqueadas</p>
               <p className="text-red-600 text-sm">
                 Esta quiniela tiene las predicciones bloqueadas. Los usuarios no pueden hacer nuevas predicciones.
-                {quiniela?.FECHA_LIMITE_PREDICCIONES && (
-                  <> Fecha límite establecida: {new Date(quiniela.FECHA_LIMITE_PREDICCIONES).toLocaleString()}</>
-                )}
               </p>
             </div>
           </div>
@@ -351,10 +427,16 @@ const QuinielaDetallePage = () => {
 
       {/* Partidos Pendientes */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Clock className="h-5 w-5 text-yellow-500" />
-          Partidos Pendientes ({partidosPendientes.length})
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Clock className="h-5 w-5 text-yellow-500" />
+            Partidos Pendientes ({partidosPendientes.length})
+          </h2>
+          {refreshing && (
+            <span className="text-xs text-gray-400 animate-pulse">Actualizando...</span>
+          )}
+        </div>
+        
         {partidosPendientes.length === 0 ? (
           <div className="text-center py-8 text-gray-500">No hay partidos pendientes</div>
         ) : (
@@ -420,7 +502,7 @@ const QuinielaDetallePage = () => {
                     <div className="font-semibold">{partido.EQUIPO_1_NOMBRE} vs {partido.EQUIPO_2_NOMBRE}</div>
                     {partido.FECHA && <div className="text-sm text-gray-500 mt-1">{new Date(partido.FECHA).toLocaleString()}</div>}
                   </div>
-                  <div className="text-2xl font-bold text-green-600">{partido.Q_GOLES_E1} - {partido.Q_GOLES_E2}</div>
+                  <div className="text-2xl font-bold text-green-600">{partido.GOLES_REALES_LOCAL} - {partido.GOLES_REALES_VISITANTE}</div>
                 </div>
               </div>
             ))}
@@ -428,45 +510,26 @@ const QuinielaDetallePage = () => {
         </div>
       )}
 
-      {/* MODAL PARA CREAR PARTIDO - ACTUALIZADO */}
+      {/* MODALES - */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Nuevo Partido</h2>
-              <button 
-                onClick={cerrarModalPartido} 
-                className="text-gray-400 hover:text-gray-600"
-                disabled={isSubmittingPartido}
-              >
+              <button onClick={cerrarModalPartido} className="text-gray-400 hover:text-gray-600" disabled={isSubmittingPartido}>
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={crearPartido}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de Partido (auto-generado)
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value="Automático"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
-                />
-                <p className="text-xs text-gray-400 mt-1">Se asignará automáticamente</p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Equipo Local *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Equipo Local *</label>
                 <select
                   name="c_equipo_1"
                   required
                   value={nuevoPartido.c_equipo_1}
                   onChange={handleNuevoPartidoChange}
                   disabled={isSubmittingPartido}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Selecciona un equipo</option>
                   {equipos.map((equipo) => (
@@ -475,22 +538,17 @@ const QuinielaDetallePage = () => {
                     </option>
                   ))}
                 </select>
-                {equipos.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">No hay equipos disponibles</p>
-                )}
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Equipo Visitante *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Equipo Visitante *</label>
                 <select
                   name="c_equipo_2"
                   required
                   value={nuevoPartido.c_equipo_2}
                   onChange={handleNuevoPartidoChange}
                   disabled={isSubmittingPartido}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Selecciona un equipo</option>
                   {equipos.map((equipo) => (
@@ -502,9 +560,7 @@ const QuinielaDetallePage = () => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Grupo *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grupo *</label>
                 <div className="flex gap-2">
                   <select
                     name="id_grupo"
@@ -512,7 +568,7 @@ const QuinielaDetallePage = () => {
                     value={nuevoPartido.id_grupo}
                     onChange={handleNuevoPartidoChange}
                     disabled={isSubmittingPartido}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">Selecciona un grupo</option>
                     {grupos.map((grupo) => (
@@ -524,51 +580,29 @@ const QuinielaDetallePage = () => {
                   <button
                     type="button"
                     onClick={() => setShowGrupoModal(true)}
-                    disabled={isSubmittingPartido}
-                    className="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 flex items-center gap-1 disabled:bg-green-400 disabled:cursor-not-allowed"
+                    className="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 flex items-center gap-1"
                   >
                     <Plus className="h-4 w-4" /> Nuevo
                   </button>
                 </div>
-                {grupos.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    No hay grupos. Haz clic en "Nuevo" para crear uno.
-                  </p>
-                )}
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha y Hora
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora</label>
                 <input
                   type="datetime-local"
                   name="fecha"
                   value={nuevoPartido.fecha}
                   onChange={handleNuevoPartidoChange}
-                  disabled={isSubmittingPartido}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={cerrarModalPartido}
-                  disabled={isSubmittingPartido}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="button" onClick={cerrarModalPartido} className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingPartido}
-                  className={`px-4 py-2 rounded-md text-white ${
-                    isSubmittingPartido 
-                      ? 'bg-indigo-400 cursor-not-allowed' 
-                      : 'bg-indigo-600 hover:bg-indigo-700'
-                  }`}
-                >
+                <button type="submit" disabled={isSubmittingPartido} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">
                   {isSubmittingPartido ? 'Creando...' : 'Crear Partido'}
                 </button>
               </div>
@@ -577,59 +611,34 @@ const QuinielaDetallePage = () => {
         </div>
       )}
 
-      {/* MODAL PARA CREAR GRUPO - ACTUALIZADO */}
       {showGrupoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Nuevo Grupo</h2>
-              <button 
-                onClick={cerrarModalGrupo} 
-                className="text-gray-400 hover:text-gray-600"
-                disabled={isSubmittingGrupo}
-              >
+              <button onClick={cerrarModalGrupo} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={crearGrupo}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre del Grupo *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Grupo *</label>
                 <input
                   type="text"
                   name="nombre"
                   required
                   value={nuevoGrupo.nombre}
                   onChange={handleNuevoGrupoChange}
-                  disabled={isSubmittingGrupo}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Ej: A, B, C, D"
-                  autoFocus
                 />
-                <p className="text-xs text-gray-400 mt-1">
-                  Se creará en la quiniela: <strong>{quinielaNombre}</strong>
-                </p>
               </div>
               <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={cerrarModalGrupo}
-                  disabled={isSubmittingGrupo}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
+                <button type="button" onClick={cerrarModalGrupo} className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingGrupo}
-                  className={`px-4 py-2 rounded-md text-white ${
-                    isSubmittingGrupo 
-                      ? 'bg-indigo-400 cursor-not-allowed' 
-                      : 'bg-indigo-600 hover:bg-indigo-700'
-                  }`}
-                >
-                  {isSubmittingGrupo ? 'Creando...' : 'Crear Grupo'}
+                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                  Crear Grupo
                 </button>
               </div>
             </form>

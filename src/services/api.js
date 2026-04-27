@@ -39,11 +39,11 @@ api.interceptors.request.use(
     
     // Log de headers (solo en desarrollo)
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔵 [API] Headers:', {
-        'Content-Type': config.headers['Content-Type'],
-        'X-API-Key': config.headers['X-API-Key'] ? '***' : 'missing',
-        'Authorization': config.headers['Authorization'] ? '***' : 'missing'
-      });
+      //console.log('🔵 [API] Headers:', {
+        //'Content-Type': config.headers['Content-Type'],
+        //'X-API-Key': config.headers['X-API-Key'] ? '***' : 'missing',
+        //'Authorization': config.headers['Authorization'] ? '***' : 'missing'
+      //});
     }
     
     return config;

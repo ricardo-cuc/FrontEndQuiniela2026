@@ -3,7 +3,7 @@ import api from './api';
 
 export const authService = {
   login: async (credentials) => {
-    console.log('🔵 [authService] Intentando login con:', credentials.u_correo);
+    //console.log('🔵 [authService] Intentando login con:', credentials.u_correo);
     
     // 🔥 Usar la ruta correcta según tu backend
     const response = await api.post('/api/usuarios/login', {
@@ -11,7 +11,7 @@ export const authService = {
       u_password: credentials.u_password
     });
     
-    console.log('🔵 [authService] Respuesta login:', response.data);
+    //console.log('🔵 [authService] Respuesta login:', response.data);
     
     if (response.data.token) {
       // Guardar token
@@ -28,7 +28,7 @@ export const authService = {
       // 🔥 IMPORTANTE: Configurar el token en axios para todas las peticiones
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       
-      console.log('✅ [authService] Token guardado y configurado en axios');
+      //console.log('✅ [authService] Token guardado y configurado en axios');
     }
     
     return response.data;
@@ -40,7 +40,7 @@ export const authService = {
   },
 
   logout: () => {
-    console.log('🔵 [authService] Cerrando sesión');
+    //console.log('🔵 [authService] Cerrando sesión');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];
@@ -54,7 +54,7 @@ export const authService = {
     // Restaurar token en axios si existe
     if (token && user) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log('🔵 [authService] Token restaurado en axios');
+      //console.log('🔵 [authService] Token restaurado en axios');
     }
     
     return user ? JSON.parse(user) : null;

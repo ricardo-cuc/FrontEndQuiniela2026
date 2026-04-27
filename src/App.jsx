@@ -13,6 +13,7 @@ import MisPrediccionesPage from './pages/MisPrediccionesPage';
 import AdminPage from './pages/AdminPage';
 import MisQuinielasPage from './pages/MisQuinielasPage';
 import PronosticosQuinielaPage from './pages/PronosticosQuinielaPage';
+import MisAciertosPage from './pages/MisAciertosPage';
 
 // Importar páginas de administración
 import CrearQuinielaPage from './pages/admin/CrearQuinielaPage';
@@ -106,6 +107,17 @@ function AppRoutes() {
             <PrivateRoute>
               <PrivateLayout>
                 <MisPrediccionesPage />
+              </PrivateLayout>
+            </PrivateRoute>
+          }
+        />
+        {/* ✅ Ruta de Mis Aciertos CORRECTAMENTE DENTRO DE Routes */}
+        <Route
+          path="/mis-aciertos"
+          element={
+            <PrivateRoute>
+              <PrivateLayout>
+                <MisAciertosPage />
               </PrivateLayout>
             </PrivateRoute>
           }
@@ -253,7 +265,7 @@ function AppRoutes() {
           }
         />
       </Routes>
-
+      
       <Toaster position="top-right" />
     </>
   );
