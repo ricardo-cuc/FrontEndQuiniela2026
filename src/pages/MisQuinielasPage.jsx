@@ -63,7 +63,7 @@ const MisQuinielasPage = () => {
       
       const response = await api.post('/api/quinielas/mis-quinielas');
       
-      console.log('📦 Respuesta:', response.data);
+      //console.log('📦 Respuesta:', response.data);
       
       const data = response.data.data;
       
@@ -77,7 +77,7 @@ const MisQuinielasPage = () => {
       }
       
     } catch (error) {
-      console.error('❌ Error:', error);
+      //console.error('❌ Error:', error);
       toast.error('Error al cargar tus quinielas');
     } finally {
       setLoading(false);

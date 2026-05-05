@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
+const SOCKET_URL = import.meta.env.VITE_API_URL 
 export const useSocket = (quinielaId) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
@@ -24,7 +23,7 @@ export const useSocket = (quinielaId) => {
     });
 
     socketRef.current.on('connect', () => {
-      console.log('🔌 Conectado al servidor Socket.IO');
+      //console.log('🔌 Conectado al servidor Socket.IO');
       setIsConnected(true);
       
       if (quinielaId) {
@@ -33,28 +32,28 @@ export const useSocket = (quinielaId) => {
     });
 
     socketRef.current.on('disconnect', (reason) => {
-      console.log('🔌 Desconectado del servidor Socket.IO:', reason);
+      //console.log('🔌 Desconectado del servidor Socket.IO:', reason);
       setIsConnected(false);
     });
 
     socketRef.current.on('connect_error', (error) => {
-      console.log('⚠️ Error de conexión Socket.IO:', error.message);
+      //console.log('⚠️ Error de conexión Socket.IO:', error.message);
       setIsConnected(false);
     });
 
     // Escuchar eventos
     socketRef.current.on('resultado-actualizado', (data) => {
-      console.log('📢 Evento resultado-actualizado:', data);
+      //console.log('📢 Evento resultado-actualizado:', data);
       setLastMessage(data);
     });
 
     socketRef.current.on('ranking-actualizado', (data) => {
-      console.log('📢 Evento ranking-actualizado:', data);
+      //console.log('📢 Evento ranking-actualizado:', data);
       setLastMessage(data);
     });
 
     socketRef.current.on('nueva-prediccion', (data) => {
-      console.log('📢 Evento nueva-prediccion:', data);
+      //console.log('📢 Evento nueva-prediccion:', data);
       setLastMessage(data);
     });
 

@@ -10,9 +10,28 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
+    // 🔥 MODO NGROK - Forzar usuario para pruebas
+    // Comenta este bloque cuando quieras volver a la autenticación normal
+    //console.log('🔓 [NGROK MODE] Forzando usuario autenticado');
+    const testUser = {
+      U_CODIGO: '00656',
+      U_ROL: 'ADMIN',
+      U_CORREO: 'admin@quiniela.com',
+      U_NOMBRES: 'Admin',
+      U_APELLIDOS: 'Test'
+    };
+    setUser(testUser);
+    localStorage.setItem('token', 'test-token-ngrok');
+    localStorage.setItem('user', JSON.stringify(testUser));
     setLoading(false);
+    //console.log('✅ Usuario forzado:', testUser);
+    return; // Salir del useEffect
+    // 🔥 FIN DEL MODO NGROK
+    
+    // Código original (comentado)
+    // const currentUser = authService.getCurrentUser();
+    // setUser(currentUser);
+    // setLoading(false);
   }, []);
 
   const login = async (credentials) => {
@@ -31,12 +50,10 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
-  // ✅ isAdmin como función (no como valor booleano)
   const isAdmin = () => {
     return user?.U_ROL === 'ADMIN';
   };
 
-  // ✅ isAuthenticated como función
   const isAuthenticated = () => {
     return !!user;
   };

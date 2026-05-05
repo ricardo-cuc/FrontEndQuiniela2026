@@ -119,14 +119,14 @@ const PronosticosQuinielaPage = () => {
       
       const response = await api.get(`/api/partidos/quiniela/${id}`);
       
-      console.log('📦 Respuesta completa:', response.data);
+      //console.log('📦 Respuesta completa:', response.data);
       
       if (response.data?.data) {
         const { quiniela: datosQuiniela, partidos: partidosArray } = response.data.data;
         
         // USAR DATOS DE LA QUINIELA DEL ENCABEZADO
         if (datosQuiniela) {
-          console.log('📋 Datos de quiniela:', datosQuiniela);
+          //console.log('📋 Datos de quiniela:', datosQuiniela);
           
           setQuiniela({
             ID_QUINIELA: datosQuiniela.ID_QUINIELA,
@@ -184,8 +184,8 @@ const PronosticosQuinielaPage = () => {
         
         setPartidos(partidosMapeados);
         
-        console.log('📊 Partidos mapeados:', partidosMapeados.length);
-        console.log('🔒 Quiniela bloqueada:', datosQuiniela?.PREDICCIONES_BLOQUEADAS);
+        //console.log('📊 Partidos mapeados:', partidosMapeados.length);
+        //  console.log('🔒 Quiniela bloqueada:', datosQuiniela?.PREDICCIONES_BLOQUEADAS);
         
       } else {
         console.error('❌ No se recibieron datos');
