@@ -84,3 +84,8 @@ pm2-*.log
 # Debug
 debug.log
 chrome-user-data/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
