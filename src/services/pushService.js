@@ -1,8 +1,9 @@
 const VAPID_PUBLIC_KEY =
   'BIo7IV9o8fXvETu9yDVSRa21ZeL8OR7XWfHuu61d3OMd2cHuJBIxFa9Isf003SDoqzP5XAkT61yabDhvO1KGXRM'
 
-let initializing = false
 
+let initializing = false
+const API_URL = import.meta.env.VITE_API
 export const pushService = {
 
   // =====================================
@@ -106,7 +107,7 @@ export const pushService = {
       // =====================================
 
       const response = await fetch(
-        'http://localhost:3000/api/notificaciones/suscribir',
+      `${API_URL}/api/notificaciones/suscribir`,
         {
           method: 'POST',
 

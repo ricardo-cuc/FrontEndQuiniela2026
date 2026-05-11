@@ -9,7 +9,7 @@ const UsuariosActivos = () => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3000', {
+    const newSocket = io(API_URL, {
       transports: ['websocket', 'polling']
     });
 
@@ -38,7 +38,7 @@ const UsuariosActivos = () => {
     try {
       const token = sessionStorage.getItem('token');
       const API_KEY = 'QNL_537490A8DF994B36BB687DEE';
-      const response = await fetch('http://localhost:3000/api/usuarios/activos', {
+      const response = await fetch(`${API_URL}/api/usuarios/activos`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-api-key': API_KEY
