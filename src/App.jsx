@@ -34,6 +34,7 @@ import QuinielasPorCampeonatoPage from './pages/admin/QuinielasPorCampeonatoPage
 import CampeonatoDetallePage from './pages/admin/CampeonatoDetallePage';
 import QuinielaDetallePage from './pages/admin/QuinielaDetallePage';
 
+const API_URL = import.meta.env.VITE_API;
 let deferredPromptGlobal = null;
 let socketPresencia = null;
 
@@ -132,7 +133,7 @@ function PresenceManager() {
   useEffect(() => {
     if (isAuthenticated && user && user.U_CODIGO) {
       if (!socketPresencia) {
-        socketPresencia = io('http://localhost:3000', {
+        socketPresencia = io(API_URL, {
           transports: ['websocket', 'polling'],
           reconnection: true
         });
