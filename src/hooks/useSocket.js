@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL 
+const SOCKET_URL = import.meta.env.VITE_API
 export const useSocket = (quinielaId) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
