@@ -94,7 +94,7 @@ const RankingPage = () => {
       if (!silencioso) {
         toast.error('Error al cargar ranking');
       }
-      console.error(error);
+      //console.error(error);
     } finally {
       if (!silencioso) {
         setLoading(false);

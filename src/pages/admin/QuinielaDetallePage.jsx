@@ -53,12 +53,6 @@ const QuinielaDetallePage = () => {
       const response = await api.get(`/api/admin/quinielas/${id}/detalle`);
       const data = response.data.data;
       
-      console.log('📦 Datos completos:', {
-        quiniela: !!data.quiniela,
-        equipos: data.equipos?.length || 0,
-        grupos: data.grupos?.length || 0
-      });
-      
       // 1. Datos de la quiniela
       if (data.quiniela) {
         setQuiniela(data.quiniela);
@@ -510,7 +504,7 @@ const QuinielaDetallePage = () => {
         </div>
       )}
 
-      {/* MODALES - */}
+      {/* MODALES */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">

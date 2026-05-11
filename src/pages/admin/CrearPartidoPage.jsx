@@ -49,7 +49,7 @@ const CrearPartidoPage = () => {
   const cargarCampeonatos = async () => {
     try {
       const response = await api.get('/api/admin/campeonatos');
-      console.log('Campeonatos:', response.data.data);
+      //console.log('Campeonatos:', response.data.data);
       setCampeonatos(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar campeonatos');
@@ -59,7 +59,7 @@ const CrearPartidoPage = () => {
   const cargarQuinielas = async (c_campeonato) => {
     try {
       const response = await api.get(`/api/admin/campeonatos/${c_campeonato}/quinielas`);
-      console.log('Quinielas para', c_campeonato, ':', response.data.data);
+      //console.log('Quinielas para', c_campeonato, ':', response.data.data);
       setQuinielas(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar quinielas');
@@ -68,15 +68,15 @@ const CrearPartidoPage = () => {
 
   const cargarEquipos = async (c_campeonato) => {
     try {
-      console.log('Cargando equipos para campeonato:', c_campeonato);
+      //console.log('Cargando equipos para campeonato:', c_campeonato);
       const response = await api.get(`/api/equipos/campeonato/${c_campeonato}`);
-      console.log('Equipos recibidos:', response.data.data);
+      //console.log('Equipos recibidos:', response.data.data);
       setEquipos(response.data.data || []);
       if (response.data.data?.length === 0) {
         toast.warning(`No hay equipos para el campeonato ${c_campeonato}`);
       }
     } catch (error) {
-      console.error('Error al cargar equipos:', error);
+      //console.error('Error al cargar equipos:', error);
       toast.error('Error al cargar equipos');
       setEquipos([]);
     }
@@ -84,18 +84,18 @@ const CrearPartidoPage = () => {
 
   const cargarGrupos = async (id_quiniela) => {
     try {
-      console.log('Cargando grupos para quiniela:', id_quiniela);
+      //console.log('Cargando grupos para quiniela:', id_quiniela);
       const response = await api.get(`/api/grupos/quiniela/${id_quiniela}`);
-      console.log('Grupos recibidos:', response.data.data);
+      //console.log('Grupos recibidos:', response.data.data);
       setGrupos(response.data.data || []);
     } catch (error) {
-      console.error('Error al cargar grupos', error);
+      //console.error('Error al cargar grupos', error);
       setGrupos([]);
     }
   };
 
   const handleChange = (e) => {
-    console.log(`Cambio en ${e.target.name}:`, e.target.value);
+    //console.log(`Cambio en ${e.target.name}:`, e.target.value);
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -113,14 +113,14 @@ const CrearPartidoPage = () => {
     }
 
     try {
-      console.log('Creando partido:', {
-        c_campeonato: formData.c_campeonato,
-        c_equipo_1: formData.c_equipo_1,
-        c_equipo_2: formData.c_equipo_2,
-        id_grupo: formData.id_grupo,
-        fecha: formData.fecha,
-        actualizado_por: formData.actualizado_por
-      });
+      //console.log('Creando partido:', {
+      //  c_campeonato: formData.c_campeonato,
+      //  c_equipo_1: formData.c_equipo_1,
+      //  c_equipo_2: formData.c_equipo_2,
+      //  id_grupo: formData.id_grupo,
+      //  fecha: formData.fecha,
+      //  actualizado_por: formData.actualizado_por
+      //});
       
       await api.post('/api/partidos', {
         c_campeonato: formData.c_campeonato,
@@ -133,7 +133,7 @@ const CrearPartidoPage = () => {
       toast.success('Partido creado exitosamente');
       navigate('/admin');
     } catch (error) {
-      console.error('Error:', error.response?.data);
+      //console.error('Error:', error.response?.data);
       toast.error(error.response?.data?.mensaje || 'Error al crear partido');
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext();
@@ -9,67 +9,64 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ============================================
+  // INIT AUTH
+  // ============================================
   useEffect(() => {
-    // 🔥 MODO NGROK - Forzar usuario para pruebas
-    // Comenta este bloque cuando quieras volver a la autenticación normal
-    //console.log('🔓 [NGROK MODE] Forzando usuario autenticado');
-    const testUser = {
-      U_CODIGO: '00656',
-      U_ROL: 'ADMIN',
-      U_CORREO: 'admin@quiniela.com',
-      U_NOMBRES: 'Admin',
-      U_APELLIDOS: 'Test'
+    const init = () => {
+      const currentUser = authService.getCurrentUser();
+
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
+
+      setLoading(false);
     };
-    setUser(testUser);
-    localStorage.setItem('token', 'test-token-ngrok');
-    localStorage.setItem('user', JSON.stringify(testUser));
-    setLoading(false);
-    //console.log('✅ Usuario forzado:', testUser);
-    return; // Salir del useEffect
-    // 🔥 FIN DEL MODO NGROK
-    
-    // Código original (comentado)
-    // const currentUser = authService.getCurrentUser();
-    // setUser(currentUser);
-    // setLoading(false);
+
+    init();
   }, []);
 
+  // ============================================
+  // LOGIN
+  // ============================================
   const login = async (credentials) => {
-    const response = await authService.login(credentials);
-    setUser(response.usuario);
-    return response;
+    const data = await authService.login(credentials);
+    setUser(data.usuario);
+    return data;
   };
 
-  const logout = () => {
-    authService.logout();
+  // ============================================
+  // LOGOUT
+  // ============================================
+  const logout = async () => {
+    await authService.logout();
     setUser(null);
   };
 
-  const register = async (userData) => {
-    const response = await authService.register(userData);
-    return response;
-  };
-
-  const isAdmin = () => {
-    return user?.U_ROL === 'ADMIN';
-  };
-
-  const isAuthenticated = () => {
+  // ============================================
+  // HELPERS (ENTERPRISE FIX)
+  // ============================================
+  const isAuthenticated = useMemo(() => {
     return !!user;
+  }, [user]);
+
+  const isAdmin = useMemo(() => {
+    return user?.U_ROL === 'ADMIN';
+  }, [user]);
+
+  const value = {
+    user,
+    login,
+    logout,
+    loading,
+    isAuthenticated,
+    isAdmin
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        register,
-        isAdmin,           
-        isAuthenticated,   
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

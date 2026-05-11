@@ -36,7 +36,7 @@ const CampeonatoDetallePage = () => {
       const response = await api.get(`/api/admin/campeonatos/${c_campeonato}/quinielas`);
       setQuinielas(response.data.data || []);
     } catch (error) {
-      console.error('Error al cargar quinielas', error);
+      //console.error('Error al cargar quinielas', error);
     }
   };
 
@@ -45,7 +45,7 @@ const CampeonatoDetallePage = () => {
       const response = await api.get(`/api/partidos/campeonato/${c_campeonato}`);
       setPartidos(response.data.data || []);
     } catch (error) {
-      console.error('Error al cargar partidos', error);
+      //console.error('Error al cargar partidos', error);
     } finally {
       setLoading(false);
     }

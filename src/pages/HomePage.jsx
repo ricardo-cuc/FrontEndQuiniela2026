@@ -122,7 +122,7 @@ const HomePage = () => {
       });
       
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      //console.error('Error cargando estadísticas:', error);
       toast.error('Error al cargar estadísticas');
     } finally {
       setLoading(false);

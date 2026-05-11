@@ -24,7 +24,7 @@ const QuinielasPorCampeonatoPage = () => {
       setQuinielas(quinielasRes.data.data || []);
     } catch (error) {
       toast.error('Error al cargar datos');
-      console.error(error);
+      //console.error(error);
     } finally {
       setLoading(false);
     }

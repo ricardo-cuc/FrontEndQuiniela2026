@@ -9,10 +9,8 @@ export const useSocket = (quinielaId) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // 🔥 CONFIGURACIÓN PARA EVITAR ERRORES DE WEBSOCKET
-    // Usar polling en lugar de websocket para mayor compatibilidad con túneles
     socketRef.current = io(SOCKET_URL, {
-      transports: ['polling', 'websocket'], // Primero intenta polling, luego websocket
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
@@ -23,37 +21,50 @@ export const useSocket = (quinielaId) => {
     });
 
     socketRef.current.on('connect', () => {
-      //console.log('🔌 Conectado al servidor Socket.IO');
+      console.log('🔌 Conectado al servidor Socket.IO');
       setIsConnected(true);
       
       if (quinielaId) {
         socketRef.current.emit('join-quiniela', quinielaId);
+        console.log(`📡 Unido a sala quiniela_${quinielaId}`);
       }
     });
 
     socketRef.current.on('disconnect', (reason) => {
-      //console.log('🔌 Desconectado del servidor Socket.IO:', reason);
+      console.log('🔌 Desconectado del servidor Socket.IO:', reason);
       setIsConnected(false);
     });
 
     socketRef.current.on('connect_error', (error) => {
-      //console.log('⚠️ Error de conexión Socket.IO:', error.message);
+      console.log('⚠️ Error de conexión Socket.IO:', error.message);
       setIsConnected(false);
     });
 
-    // Escuchar eventos
-    socketRef.current.on('resultado-actualizado', (data) => {
-      //console.log('📢 Evento resultado-actualizado:', data);
+    // Evento para sala específica
+    socketRef.current.on('resultado_actualizado', (data) => {
+      console.log('📢 Evento resultado_actualizado recibido:', data);
       setLastMessage(data);
     });
 
-    socketRef.current.on('ranking-actualizado', (data) => {
-      //console.log('📢 Evento ranking-actualizado:', data);
+    socketRef.current.on('ranking_actualizado', (data) => {
+      console.log('📢 Evento ranking_actualizado recibido:', data);
       setLastMessage(data);
     });
 
-    socketRef.current.on('nueva-prediccion', (data) => {
-      //console.log('📢 Evento nueva-prediccion:', data);
+    socketRef.current.on('nueva_prediccion', (data) => {
+      console.log('📢 Evento nueva_prediccion recibido:', data);
+      setLastMessage(data);
+    });
+
+    // Evento para sala específica (predicciones bloqueadas)
+    socketRef.current.on('predicciones_bloqueadas', (data) => {
+      console.log('📢 Evento predicciones_bloqueadas recibido:', data);
+      setLastMessage(data);
+    });
+
+    // 🔥 NUEVO: Evento GLOBAL para predicciones bloqueadas (para MisQuinielasPage)
+    socketRef.current.on('predicciones_bloqueadas_global', (data) => {
+      console.log('📢 Evento predicciones_bloqueadas_global recibido:', data);
       setLastMessage(data);
     });
 

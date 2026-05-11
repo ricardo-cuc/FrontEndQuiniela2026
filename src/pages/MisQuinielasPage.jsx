@@ -1,7 +1,7 @@
 // src/pages/MisQuinielasPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Calendar, Users, ChevronRight, Award, TrendingUp, CheckCircle, Lock, Bell, Wifi, WifiOff, X } from 'lucide-react';
+import { Trophy, Calendar, ChevronRight, Award, TrendingUp, CheckCircle, Lock, Bell, Wifi, WifiOff, X, Unlock } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useSocket } from '../hooks/useSocket';
@@ -16,19 +16,65 @@ const MisQuinielasPage = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [puntosActualizados, setPuntosActualizados] = useState(false);
+  
+  // Usar ref para evitar bucles infinitos
+  const isUpdatingRef = useRef(false);
 
-  // ✅ EFECTO PRINCIPAL: Cargar datos al montar el componente
   useEffect(() => {
     cargarMisQuinielas();
   }, []);
 
   // Efecto para escuchar mensajes en tiempo real
   useEffect(() => {
-    if (lastMessage) {
+    if (lastMessage && !isUpdatingRef.current) {
+      console.log('📡 Evento recibido en MisQuinielasPage:', lastMessage);
+      
+      isUpdatingRef.current = true;
+      
+      // 🔥 Detectar cambio de bloqueo de predicciones
+      if (lastMessage.type === 'PREDICCIONES_BLOQUEADAS') {
+        const bloqueado = lastMessage.bloqueado === true;
+        const quinielaId = lastMessage.quinielaId;
+        
+        // Buscar la quiniela afectada
+        const quinielaAfectada = quinielas.find(q => q.ID_QUINIELA === quinielaId);
+        const nombreQuiniela = quinielaAfectada?.NOMBRE || `Quiniela #${quinielaId}`;
+        
+        const message = bloqueado 
+          ? `🔒 Las predicciones de "${nombreQuiniela}" han sido BLOQUEADAS` 
+          : `🔓 Las predicciones de "${nombreQuiniela}" han sido DESBLOQUEADAS`;
+        
+        // Actualizar el estado local de la quiniela SIN recargar
+        setQuinielas(prev => prev.map(q => 
+          q.ID_QUINIELA === quinielaId 
+            ? { ...q, PREDICCIONES_BLOQUEADAS: bloqueado }
+            : q
+        ));
+        
+        // Mostrar notificación
+        toast(message, {
+          icon: bloqueado ? '🔒' : '🔓',
+          duration: 5000
+        });
+        
+        setNotificationMessage(message);
+        setShowNotification(true);
+        
+        setTimeout(() => {
+          setShowNotification(false);
+          isUpdatingRef.current = false;
+        }, 5000);
+        return;
+      }
+      
+      // Resto de eventos - recargar datos
       let message = '';
+      
       switch (lastMessage.type) {
         case 'RESULTADO_ACTUALIZADO':
-          message = `⚽ Resultado actualizado en ${lastMessage.partido?.EQUIPO_1_NOMBRE} vs ${lastMessage.partido?.EQUIPO_2_NOMBRE}`;
+          const equipo1 = lastMessage.EQUIPO_1_NOMBRE || 'Local';
+          const equipo2 = lastMessage.EQUIPO_2_NOMBRE || 'Visitante';
+          message = `⚽ ${equipo1} ${lastMessage.Q_GOLES_E1} - ${lastMessage.Q_GOLES_E2} ${equipo2}`;
           cargarMisQuinielas();
           setPuntosActualizados(true);
           setTimeout(() => setPuntosActualizados(false), 3000);
@@ -44,26 +90,31 @@ const MisQuinielasPage = () => {
           cargarMisQuinielas();
           break;
         default:
-          message = 'Actualización en tus quinielas';
+          message = '🔄 Actualización en tus quinielas';
           cargarMisQuinielas();
       }
       
-      setNotificationMessage(message);
-      setShowNotification(true);
-      
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 5000);
+      if (message) {
+        setNotificationMessage(message);
+        setShowNotification(true);
+        
+        setTimeout(() => {
+          setShowNotification(false);
+          isUpdatingRef.current = false;
+        }, 5000);
+      } else {
+        setTimeout(() => {
+          isUpdatingRef.current = false;
+        }, 500);
+      }
     }
-  }, [lastMessage]);
+  }, [lastMessage]); // ⚠️ QUITAR quinielas de las dependencias
 
   const cargarMisQuinielas = async () => {
     try {
       setLoading(true);
       
       const response = await api.post('/api/quinielas/mis-quinielas');
-      
-      //console.log('📦 Respuesta:', response.data);
       
       const data = response.data.data;
       
@@ -77,7 +128,7 @@ const MisQuinielasPage = () => {
       }
       
     } catch (error) {
-      //console.error('❌ Error:', error);
+      console.error('❌ Error:', error);
       toast.error('Error al cargar tus quinielas');
     } finally {
       setLoading(false);
@@ -107,7 +158,15 @@ const MisQuinielasPage = () => {
       {/* Notificación en tiempo real */}
       {showNotification && (
         <div className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white rounded-lg shadow-lg p-4 max-w-md flex items-center gap-3 animate-slide-up">
-          <Bell className="h-5 w-5" />
+          {notificationMessage.includes('🔒') || notificationMessage.includes('🔓') ? (
+            notificationMessage.includes('🔒') ? (
+              <Lock className="h-5 w-5" />
+            ) : (
+              <Unlock className="h-5 w-5" />
+            )
+          ) : (
+            <Bell className="h-5 w-5" />
+          )}
           <div className="flex-1">
             <p className="text-sm font-medium">{notificationMessage}</p>
             <p className="text-xs opacity-75">
@@ -161,8 +220,13 @@ const MisQuinielasPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {quinielas.map((quiniela) => (
           <div key={quiniela.ID_QUINIELA} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+            <div className={`px-6 py-4 ${quiniela.PREDICCIONES_BLOQUEADAS ? 'bg-gradient-to-r from-red-600 to-orange-600' : 'bg-gradient-to-r from-indigo-600 to-purple-600'}`}>
               <h2 className="text-xl font-semibold text-white">{quiniela.NOMBRE}</h2>
+              {quiniela.PREDICCIONES_BLOQUEADAS && (
+                <p className="text-xs text-white/80 mt-1 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Predicciones bloqueadas
+                </p>
+              )}
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4 line-clamp-2">
@@ -199,12 +263,6 @@ const MisQuinielasPage = () => {
                     Predicciones: {quiniela.TOTAL_PREDICCIONES || 0}
                   </span>
                 </div>
-                {quiniela.PREDICCIONES_BLOQUEADAS && (
-                  <div className="flex items-center text-sm text-red-500 mt-2">
-                    <Lock className="h-4 w-4 mr-2" />
-                    <span>Predicciones bloqueadas</span>
-                  </div>
-                )}
               </div>
               
               {/* Botones de acción */}
@@ -213,7 +271,7 @@ const MisQuinielasPage = () => {
                   to={`/quinielas/${quiniela.ID_QUINIELA}/pronosticos`}
                   className={`flex-1 py-2 px-4 rounded-md transition flex items-center justify-between ${
                     quiniela.PREDICCIONES_BLOQUEADAS 
-                      ? 'bg-gray-400 cursor-not-allowed' 
+                      ? 'bg-gray-400 cursor-not-allowed opacity-50' 
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                   }`}
                   onClick={(e) => {

@@ -1,80 +1,86 @@
-// src/services/api.js
 import axios from 'axios';
+import { authService } from './authService';
 
-// ============================================
-// CONFIGURACIÓN - LEER VARIABLES DE ENTORNO
-// ============================================
-const API_URL = import.meta.env.VITE_API_URL;
-const API_KEY = import.meta.env.VITE_API_KEY;
-
-// console.log('🔧 API Configuración:');
-// console.log('  URL:', API_URL);
-// console.log('  API Key:', API_KEY ? '✅ presente' : '❌ falta');
-
-// Crear instancia de axios
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': API_KEY,
-  },
-  withCredentials: false,
-  timeout: 30000
+    'x-api-key': import.meta.env.VITE_API_KEY || ''
+  }
 });
 
-// ============================================
-// INTERCEPTOR DE SOLICITUDES (REQUEST)
-// ============================================
-api.interceptors.request.use(
-  (config) => {
-    // console.log(`🔵 [API] ${config.method?.toUpperCase()} ${config.url}`);
-    
-    // Asegurar que la API Key esté presente
-    if (!config.headers['X-API-Key'] && API_KEY) {
-      config.headers['X-API-Key'] = API_KEY;
-    }
+let isRefreshing = false;
+let queue = [];
 
-    // Agregar token JWT si existe (desde localStorage)
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-      // console.log(`🔵 [API] Token añadido a ${config.url}`);
-    }
-    
-    return config;
-  },
-  (error) => {
-    console.error('❌ Error en petición:', error);
-    return Promise.reject(error);
+const processQueue = (token = null) => {
+  queue.forEach(p => {
+    token ? p.resolve(token) : p.reject();
+  });
+  queue = [];
+};
+
+// REQUEST
+api.interceptors.request.use((config) => {
+  // ✅ CAMBIADO: localStorage → sessionStorage
+  const token = sessionStorage.getItem('token');
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
 
-// ============================================
-// INTERCEPTOR DE RESPUESTAS (RESPONSE)
-// 🔥 SIN REDIRECCIONES AUTOMÁTICAS
-// ============================================
+  if (!config.headers['x-api-key']) {
+    config.headers['x-api-key'] = import.meta.env.VITE_API_KEY || '';
+  }
+
+  return config;
+});
+
+// RESPONSE
 api.interceptors.response.use(
-  (response) => {
-    // console.log(`✅ [API] ${response.status} ${response.config.url}`);
-    return response;
-  },
-  (error) => {
-   // console.error(`❌ [API] Error ${error.response?.status} en ${error.config?.url}`);
-    //console.error('  Detalle:', error.response?.data);
-    
-    // Solo limpiar localStorage pero NO redirigir automáticamente
-    if (error.response?.status === 401) {
-      console.warn('  🔒 Sesión expirada o token inválido - Limpiando localStorage');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      delete api.defaults.headers.common['Authorization'];
-      
-      // 🔥 COMENTADO - No redirigir automáticamente
-      // if (!error.config?.url?.includes('/verificar-estado')) {
-      //   window.location.href = '/login';
-      // }
+  res => res,
+
+  async (error) => {
+    const original = error.config;
+
+    if (!error.response) return Promise.reject(error);
+
+    if (error.response.status === 401 && !original._retry) {
+
+      original._retry = true;
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          queue.push({
+            resolve: (token) => {
+              original.headers.Authorization = `Bearer ${token}`;
+              resolve(api(original));
+            },
+            reject
+          });
+        });
+      }
+
+      isRefreshing = true;
+
+      try {
+        const newToken = await authService.refreshToken();
+
+        processQueue(newToken);
+
+        original.headers.Authorization = `Bearer ${newToken}`;
+
+        return api(original);
+
+      } catch (err) {
+        processQueue(null);
+        authService.logout();
+        return Promise.reject(err);
+
+      } finally {
+        isRefreshing = false;
+      }
     }
-    
+
     return Promise.reject(error);
   }
 );

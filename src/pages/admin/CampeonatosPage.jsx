@@ -25,7 +25,7 @@ const CampeonatosPage = () => {
       setCampeonatos(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar campeonatos');
-      console.error(error);
+      //console.error(error);
     } finally {
       setLoading(false);
     }

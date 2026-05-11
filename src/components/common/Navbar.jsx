@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { User, LogOut, Shield } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin } = useAuth(); // isAdmin es booleano
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -22,10 +22,8 @@ const Navbar = () => {
       const currentScrollY = window.scrollY;
       
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scroll hacia abajo y pasó los 100px - ocultar navbar
         setIsVisible(false);
       } else {
-        // Scroll hacia arriba - mostrar navbar
         setIsVisible(true);
       }
       
@@ -33,7 +31,6 @@ const Navbar = () => {
     };
 
     window.addEventListener('scroll', controlNavbar);
-    
     return () => {
       window.removeEventListener('scroll', controlNavbar);
     };
@@ -54,7 +51,6 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Navbar fijo con animación */}
       <nav className={`
         bg-indigo-600 text-white shadow-lg 
         fixed top-0 left-0 right-0 z-50
@@ -66,20 +62,18 @@ const Navbar = () => {
             
             {/* Logo - Responsive */}
             <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
-              {/* Logo de pelota - siempre visible */}
               <img 
                 src="/logo.png"
                 alt="Lucalza"
                 className="h-8 w-auto"
               />
-              {/* Texto - se oculta en móviles */}
               <span className="hidden sm:inline-block text-lg md:text-xl font-bold">
                 Quiniela Lucalza
               </span>
             </Link>
 
             {/* Menú de administrador - solo visible para admins en desktop */}
-            {isAdmin() && (
+            {isAdmin && (  // ✅ Corregido: quitados los paréntesis de función
               <div className="hidden md:flex items-center space-x-4">
                 <Link 
                   to="/admin" 
@@ -91,7 +85,7 @@ const Navbar = () => {
               </div>
             )}
 
-            {/* Menú de usuario - solo silueta */}
+            {/* Menú de usuario */}
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -101,7 +95,7 @@ const Navbar = () => {
                 <User className="h-5 w-5" />
               </button>
 
-              {/* Menú desplegable con nombre y logout */}
+              {/* Menú desplegable */}
               {isUserMenuOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-200">
@@ -114,7 +108,7 @@ const Navbar = () => {
                   </div>
                   <div className="py-1">
                     {/* Panel de administrador - solo visible para admins */}
-                    {isAdmin() && (
+                    {isAdmin && (  // ✅ Corregido: quitados los paréntesis de función
                       <>
                         <Link
                           to="/admin"
@@ -129,13 +123,6 @@ const Navbar = () => {
                         <div className="border-t border-gray-200"></div>
                       </>
                     )}
-                    {/* <Link
-                      to="/perfil"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      Mi Perfil
-                    </Link> */}
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
@@ -143,7 +130,10 @@ const Navbar = () => {
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                     >
-                      Cerrar Sesión
+                      <div className="flex items-center space-x-2">
+                        <LogOut className="h-4 w-4" />
+                        <span>Cerrar Sesión</span>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -153,7 +143,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Espaciador para que el contenido no quede debajo del navbar fijo */}
+      {/* Espaciador */}
       <div className="h-16"></div>
     </>
   );

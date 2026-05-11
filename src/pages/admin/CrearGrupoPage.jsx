@@ -35,7 +35,7 @@ const CrearGrupoPage = () => {
       setCampeonatos(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar campeonatos');
-      console.error(error);
+      //console.error(error);
     }
   };
 
@@ -45,7 +45,7 @@ const CrearGrupoPage = () => {
       setQuinielas(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar quinielas');
-      console.error(error);
+      //console.error(error);
     }
   };
 

@@ -19,6 +19,7 @@ const QuinielaDetailPage = () => {
   const { isConnected, lastMessage } = useSocket(id);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationData, setNotificationData] = useState(null);
   const [participantesActualizados, setParticipantesActualizados] = useState(false);
 
   useEffect(() => {
@@ -29,34 +30,52 @@ const QuinielaDetailPage = () => {
   // 🔥 Efecto para escuchar mensajes en tiempo real
   useEffect(() => {
     if (lastMessage) {
+      console.log('📡 Evento recibido en frontend:', lastMessage);
+      
       let message = '';
-      switch (lastMessage.type) {
-        case 'RESULTADO_ACTUALIZADO':
-          message = `⚽ Resultado actualizado en esta quiniela`;
-          cargarEstadisticas();
-          break;
-        case 'RANKING_ACTUALIZADO':
-          message = `🏆 El ranking de esta quiniela ha cambiado`;
-          cargarEstadisticas();
-          setParticipantesActualizados(true);
-          setTimeout(() => setParticipantesActualizados(false), 3000);
-          break;
-        case 'NUEVA_PREDICCION':
-          message = `📝 Nueva predicción registrada en esta quiniela`;
-          cargarEstadisticas();
-          setParticipantesActualizados(true);
-          setTimeout(() => setParticipantesActualizados(false), 3000);
-          break;
-        default:
-          message = 'Actualización en esta quiniela';
-          cargarEstadisticas();
+      
+      // 🔥 Detectar por tipo o por estructura del mensaje
+      const isResultado = lastMessage.type === 'RESULTADO_ACTUALIZADO' || 
+                         (lastMessage.EQUIPO_1_NOMBRE && lastMessage.Q_GOLES_E1 !== undefined);
+      
+      const isRanking = lastMessage.type === 'RANKING_ACTUALIZADO' ||
+                       (lastMessage.ranking_actualizado !== undefined);
+      
+      if (isResultado) {
+        // Mostrar notificación detallada del resultado
+        const equipo1 = lastMessage.EQUIPO_1_NOMBRE || 'Local';
+        const equipo2 = lastMessage.EQUIPO_2_NOMBRE || 'Visitante';
+        const goles1 = lastMessage.Q_GOLES_E1 ?? lastMessage.goles_local ?? 0;
+        const goles2 = lastMessage.Q_GOLES_E2 ?? lastMessage.goles_visitante ?? 0;
+        
+        message = `⚽ ${equipo1} ${goles1} - ${goles2} ${equipo2}`;
+        setNotificationData({ equipo1, goles1, equipo2, goles2 });
+        cargarEstadisticas();
+      } 
+      else if (isRanking) {
+        message = `🏆 ¡El ranking se ha actualizado!`;
+        cargarEstadisticas();
+        setParticipantesActualizados(true);
+        setTimeout(() => setParticipantesActualizados(false), 3000);
+      }
+      else if (lastMessage.type === 'NUEVA_PREDICCION') {
+        message = `📝 Nueva predicción registrada en esta quiniela`;
+        cargarEstadisticas();
+        setParticipantesActualizados(true);
+        setTimeout(() => setParticipantesActualizados(false), 3000);
+      }
+      else {
+        message = '🔄 Actualización en esta quiniela';
+        cargarEstadisticas();
       }
       
       setNotificationMessage(message);
       setShowNotification(true);
       
+      // Auto-ocultar después de 5 segundos
       setTimeout(() => {
         setShowNotification(false);
+        setNotificationData(null);
       }, 5000);
     }
   }, [lastMessage]);
@@ -117,17 +136,38 @@ const QuinielaDetailPage = () => {
 
   return (
     <div>
-      {/* 🔥 Notificación en tiempo real */}
+      {/* 🔥 Notificación en tiempo real - VERSION MEJORADA */}
       {showNotification && (
         <div className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white rounded-lg shadow-lg p-4 max-w-md flex items-center gap-3 animate-slide-up">
-          <Bell className="h-5 w-5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium">{notificationMessage}</p>
-            <p className="text-xs opacity-75">
-              {new Date().toLocaleTimeString()}
-            </p>
-          </div>
-          <button onClick={() => setShowNotification(false)} className="text-white hover:text-gray-200">
+          {notificationData ? (
+            // Notificación con resultado de partido
+            <div className="flex items-center gap-3 w-full">
+              <div className="bg-white/20 rounded-full p-2">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold">{notificationData.equipo1} vs {notificationData.equipo2}</p>
+                <p className="text-lg font-black">
+                  {notificationData.goles1} - {notificationData.goles2}
+                </p>
+              </div>
+            </div>
+          ) : (
+            // Notificación genérica
+            <>
+              <Bell className="h-5 w-5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">{notificationMessage}</p>
+                <p className="text-xs opacity-75">
+                  {new Date().toLocaleTimeString()}
+                </p>
+              </div>
+            </>
+          )}
+          <button 
+            onClick={() => setShowNotification(false)} 
+            className="text-white hover:text-gray-200 transition-colors"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>

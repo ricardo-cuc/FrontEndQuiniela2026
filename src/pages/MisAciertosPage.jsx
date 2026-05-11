@@ -223,12 +223,12 @@ const MisAciertosPage = () => {
               <p className="text-gray-500 mb-4">
                 Sigue participando y haciendo tus predicciones. ¡Tus aciertos aparecerán aquí!
               </p>
-              <Link 
+              {/* <Link 
                 to={`/quinielas/${quinielaSeleccionada?.ID_QUINIELA}/pronosticos`}
                 className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700"
               >
                 Hacer predicciones ahora
-              </Link>
+              </Link> */}
             </div>
           )}
 

@@ -29,18 +29,18 @@ import {
   Wifi,           // Icono de wifi para conexión
   WifiOff,        // Icono de wifi desconectado
   TrendingUp,     // Icono para ranking
-  X               // Icono para cerrar notificación
+  X,              // Icono para cerrar notificación
+  RefreshCw       // Icono para recargar
 } from 'lucide-react';
 import api from '../services/api';      // Cliente HTTP configurado
 import toast from 'react-hot-toast';    // Notificaciones tipo toast
-import { useSocket } from '../hooks/useSocket';  // 🔥 NUEVO: Hook de Socket.IO
+import { useSocket } from '../hooks/useSocket';  // Hook de Socket.IO
 
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 const PronosticosQuinielaPage = () => {
   // useParams obtiene los parámetros de la URL
-  // Ej: /quiniela/15 → id = 15
   const { id } = useParams();
   
   // ============================================
@@ -57,7 +57,6 @@ const PronosticosQuinielaPage = () => {
   const [loading, setLoading] = useState(true);
   
   // Estado para el botón de guardar (evita múltiples envíos)
-  // Ej: { 51: true, 45: false } → partido 51 está guardando
   const [enviando, setEnviando] = useState({});
   
   // Indica si la quiniela tiene las predicciones bloqueadas
@@ -65,11 +64,13 @@ const PronosticosQuinielaPage = () => {
   
   // Evitar múltiples cargas
   const cargadoRef = useRef(false);
+  const actualizandoRef = useRef(false);
 
-  // 🔥 NUEVO: Socket.IO para tiempo real
+  // Socket.IO para tiempo real
   const { isConnected, lastMessage } = useSocket(id);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationIcon, setNotificationIcon] = useState(null);
   const [rankingActualizado, setRankingActualizado] = useState(false);
 
   // ============================================
@@ -82,31 +83,73 @@ const PronosticosQuinielaPage = () => {
     }
   }, [id]);
 
-  // 🔥 NUEVO: Efecto para escuchar mensajes en tiempo real
+  // ============================================
+  // EFECTO: Escuchar mensajes en tiempo real
+  // ============================================
   useEffect(() => {
-    if (lastMessage) {
+    if (lastMessage && !actualizandoRef.current) {
+      actualizandoRef.current = true;
+      
+      console.log('📡 Evento recibido en PronosticosPage:', lastMessage);
+      
       let message = '';
-      switch (lastMessage.type) {
-        case 'RESULTADO_ACTUALIZADO':
-          message = `⚽ Resultado actualizado: ${lastMessage.partido?.EQUIPO_1_NOMBRE} ${lastMessage.partido?.Q_GOLES_E1} - ${lastMessage.partido?.Q_GOLES_E2} ${lastMessage.partido?.EQUIPO_2_NOMBRE}`;
-          // Recargar datos en segundo plano
-          cargarDatos();
-          break;
-        case 'RANKING_ACTUALIZADO':
-          message = `🏆 El ranking ha sido actualizado`;
-          setRankingActualizado(true);
-          setTimeout(() => setRankingActualizado(false), 3000);
-          break;
-        default:
-          message = 'Actualización en la quiniela';
+      let icon = null;
+      
+      // Detectar bloqueo/desbloqueo de predicciones
+      if (lastMessage.type === 'PREDICCIONES_BLOQUEADAS') {
+        const bloqueado = lastMessage.bloqueado === true;
+        
+        setPrediccionesBloqueadas(bloqueado);
+        setQuiniela(prev => prev ? { ...prev, PREDICCIONES_BLOQUEADAS: bloqueado } : prev);
+        
+        message = bloqueado 
+          ? '🔒 Las predicciones han sido BLOQUEADAS por el administrador'
+          : '🔓 Las predicciones han sido DESBLOQUEADAS por el administrador';
+        icon = bloqueado ? '🔒' : '🔓';
+        
+        // Recargar datos para actualizar el estado de los partidos
+        setTimeout(() => cargarDatos(), 500);
+        
+      } else if (lastMessage.type === 'RESULTADO_ACTUALIZADO' || 
+          (lastMessage.EQUIPO_1_NOMBRE && lastMessage.Q_GOLES_E1 !== undefined)) {
+        
+        const equipo1 = lastMessage.EQUIPO_1_NOMBRE || 'Local';
+        const equipo2 = lastMessage.EQUIPO_2_NOMBRE || 'Visitante';
+        const goles1 = lastMessage.Q_GOLES_E1 ?? 0;
+        const goles2 = lastMessage.Q_GOLES_E2 ?? 0;
+        
+        message = `⚽ ${equipo1} ${goles1} - ${goles2} ${equipo2}`;
+        icon = '⚽';
+        
+        // Recargar datos para actualizar la UI
+        setTimeout(() => cargarDatos(), 500);
+        
+      } else if (lastMessage.type === 'RANKING_ACTUALIZADO') {
+        message = '🏆 El ranking ha sido actualizado';
+        icon = '🏆';
+        setRankingActualizado(true);
+        setTimeout(() => setRankingActualizado(false), 3000);
+      } else {
+        message = '🔄 Actualización en la quiniela';
+        icon = '🔄';
+        setTimeout(() => cargarDatos(), 500);
       }
       
-      setNotificationMessage(message);
-      setShowNotification(true);
-      
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 5000);
+      if (message) {
+        setNotificationMessage(message);
+        setNotificationIcon(icon);
+        setShowNotification(true);
+        
+        setTimeout(() => {
+          setShowNotification(false);
+          setNotificationIcon(null);
+          actualizandoRef.current = false;
+        }, 5000);
+      } else {
+        setTimeout(() => {
+          actualizandoRef.current = false;
+        }, 1000);
+      }
     }
   }, [lastMessage]);
 
@@ -119,21 +162,22 @@ const PronosticosQuinielaPage = () => {
       
       const response = await api.get(`/api/partidos/quiniela/${id}`);
       
-      //console.log('📦 Respuesta completa:', response.data);
-      
       if (response.data?.data) {
         const { quiniela: datosQuiniela, partidos: partidosArray } = response.data.data;
         
-        // USAR DATOS DE LA QUINIELA DEL ENCABEZADO
+        // 🔥 Calcular puntos totales sumando los puntos de cada partido
+        const puntosTotales = (partidosArray || []).reduce((total, partido) => {
+          return total + (partido.PUNTOS_OBTENIDOS || 0);
+        }, 0);
+        
+        // DATOS DE LA QUINIELA
         if (datosQuiniela) {
-          //console.log('📋 Datos de quiniela:', datosQuiniela);
-          
           setQuiniela({
             ID_QUINIELA: datosQuiniela.ID_QUINIELA,
             NOMBRE: datosQuiniela.NOMBRE || 'Quiniela',
             DESCRIPCION: datosQuiniela.DESCRIPCION || 'Sin descripción',
             C_CAMPEONATO: datosQuiniela.C_CAMPEONATO || 'M26',
-            PUNTOS_TOTALES: 0,
+            PUNTOS_TOTALES: puntosTotales, // 🔥 Ahora muestra los puntos reales
             PREDICCIONES_BLOQUEADAS: datosQuiniela.PREDICCIONES_BLOQUEADAS === true,
             FECHA_INICIO: datosQuiniela.FECHA_INICIO,
             FECHA_FIN: datosQuiniela.FECHA_FIN,
@@ -143,25 +187,7 @@ const PronosticosQuinielaPage = () => {
           setPrediccionesBloqueadas(datosQuiniela.PREDICCIONES_BLOQUEADAS === true);
         }
         
-        // Función para calcular tiempo restante (por si acaso)
-        const calcularTiempoRestante = (fechaPartido) => {
-          if (!fechaPartido) return null;
-          const ahora = new Date();
-          const fecha = new Date(fechaPartido);
-          if (ahora >= fecha) return null;
-          
-          const diffMinutos = Math.floor((fecha - ahora) / 60000);
-          
-          if (diffMinutos >= 1440) {
-            return `${Math.floor(diffMinutos / 1440)} días`;
-          } else if (diffMinutos >= 60) {
-            return `${Math.floor(diffMinutos / 60)} horas`;
-          } else {
-            return `${diffMinutos} minutos`;
-          }
-        };
-        
-        // Mapear partidos (ya vienen con los campos correctos)
+        // MAPEAR PARTIDOS
         const partidosMapeados = (partidosArray || []).map(p => ({
           ...p,
           NRO_PARTIDO: p.NRO_PARTIDO,
@@ -178,17 +204,11 @@ const PronosticosQuinielaPage = () => {
           NOMBRE_FASE: p.NOMBRE_FASE,
           ESTADO_CALCULADO: p.ESTADO_CALCULADO,
           ESTADO_USUARIO: p.ESTADO_USUARIO,
-          TIEMPO_HUMANO: p.TIEMPO_HUMANO || calcularTiempoRestante(p.FECHA),
+          TIEMPO_HUMANO: p.TIEMPO_HUMANO,
           PUEDE_PREDECIR: p.PUEDE_PREDECIR
         }));
         
         setPartidos(partidosMapeados);
-        
-        //console.log('📊 Partidos mapeados:', partidosMapeados.length);
-        //  console.log('🔒 Quiniela bloqueada:', datosQuiniela?.PREDICCIONES_BLOQUEADAS);
-        
-      } else {
-        console.error('❌ No se recibieron datos');
       }
       
     } catch (error) {
@@ -231,7 +251,6 @@ const PronosticosQuinielaPage = () => {
       return;
     }
 
-    // Marcar que este partido está en proceso de envío
     setEnviando(prev => ({ ...prev, [partido.NRO_PARTIDO]: true }));
 
     try {
@@ -256,6 +275,9 @@ const PronosticosQuinielaPage = () => {
             }
           : p
       ));
+      
+      // 🔥 Recargar datos para actualizar puntos totales
+      setTimeout(() => cargarDatos(), 1000);
       
     } catch (error) {
       let mensaje = error.response?.data?.message || error.response?.data?.mensaje || 'Error al guardar predicción';
@@ -282,7 +304,6 @@ const PronosticosQuinielaPage = () => {
   const puedePredecirPartido = (partido) => {
     if (prediccionesBloqueadas) return false;
     if (partido.YA_PREDICHO) return false;
-    // Usar ESTADO_USUARIO para saber si está disponible
     return partido.ESTADO_USUARIO === 'DISPONIBLE';
   };
 
@@ -290,6 +311,7 @@ const PronosticosQuinielaPage = () => {
   // OBTENER: Razón por la que NO puede predecir
   // ============================================
   const getRazonNoPrediccion = (partido) => {
+    if (prediccionesBloqueadas) return 'Predicciones bloqueadas por el administrador';
     if (partido.YA_PREDICHO) return 'Ya realizaste tu predicción';
     switch (partido.ESTADO_USUARIO) {
       case 'FINALIZADO':
@@ -305,7 +327,6 @@ const PronosticosQuinielaPage = () => {
   // OBTENER: Texto del tiempo restante
   // ============================================
   const getTiempoRestanteTexto = (partido) => {
-    // Usar directamente el tiempo que viene del SP
     if (partido.TIEMPO_HUMANO && partido.ESTADO_USUARIO === 'DISPONIBLE') {
       return partido.TIEMPO_HUMANO;
     }
@@ -407,10 +428,10 @@ const PronosticosQuinielaPage = () => {
 
   return (
     <div>
-      {/* 🔥 NUEVO: Notificación en tiempo real */}
+      {/* Notificación en tiempo real */}
       {showNotification && (
         <div className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white rounded-lg shadow-lg p-4 max-w-md flex items-center gap-3 animate-slide-up">
-          <Bell className="h-5 w-5" />
+          <div className="text-xl">{notificationIcon || <Bell className="h-5 w-5" />}</div>
           <div className="flex-1">
             <p className="text-sm font-medium">{notificationMessage}</p>
             <p className="text-xs opacity-75">
@@ -423,7 +444,7 @@ const PronosticosQuinielaPage = () => {
         </div>
       )}
 
-      {/* 🔥 NUEVO: Indicador de conexión */}
+      {/* Indicador de conexión Socket.IO */}
       <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow-md">
         {isConnected ? (
           <>
@@ -438,7 +459,7 @@ const PronosticosQuinielaPage = () => {
         )}
       </div>
 
-      {/* 🔥 NUEVO: Indicador de ranking actualizado */}
+      {/* Indicador de ranking actualizado */}
       {rankingActualizado && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white rounded-lg shadow-lg p-3 animate-slide-down">
           <TrendingUp className="h-5 w-5 inline mr-2" />
@@ -451,13 +472,28 @@ const PronosticosQuinielaPage = () => {
         Volver a Mis Quinielas
       </Link>
 
-      {/* Header de la quiniela - Fondo degradado */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
-        <h1 className="text-2xl font-bold">{quiniela?.NOMBRE || 'Quiniela'}</h1>
-        <p className="mt-2">{quiniela?.DESCRIPCION || 'Sin descripción'}</p>
-        <div className="mt-4 flex flex-wrap gap-4 text-sm">
-          <span>🏆 {quiniela?.C_CAMPEONATO || 'M26'}</span>
-          <span>⭐ Tus puntos: {quiniela?.PUNTOS_TOTALES || 0}</span>
+      {/* Header de la quiniela - Color dinámico según bloqueo */}
+      <div className={`rounded-lg shadow-lg p-6 text-white mb-8 ${
+        prediccionesBloqueadas 
+          ? 'bg-gradient-to-r from-red-600 to-orange-600' 
+          : 'bg-gradient-to-r from-indigo-600 to-purple-600'
+      }`}>
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">{quiniela?.NOMBRE || 'Quiniela'}</h1>
+            <p className="mt-2">{quiniela?.DESCRIPCION || 'Sin descripción'}</p>
+            <div className="mt-4 flex flex-wrap gap-4 text-sm">
+              <span>🏆 {quiniela?.C_CAMPEONATO || 'M26'}</span>
+              <span>⭐ Tus puntos: {quiniela?.PUNTOS_TOTALES || 0}</span>
+              {isConnected && <span className="text-green-300">● Tiempo real</span>}
+            </div>
+          </div>
+          {prediccionesBloqueadas && (
+            <div className="bg-red-500/30 px-3 py-1 rounded-full flex items-center gap-1">
+              <Lock className="h-4 w-4" />
+              <span className="text-xs font-semibold">BLOQUEADA</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -486,11 +522,10 @@ const PronosticosQuinielaPage = () => {
           </div>
         )}
 
-        {/* Mapeo de cada partido a una tarjeta */}
         {partidos.map((partido) => {
           const tiempoTexto = getTiempoRestanteTexto(partido);
           const mensajeInfo = getMensajeInformativo(partido);
-          const razonNoPrediccion = getRazonNoPrediccion(partido);
+          const puedePredecir = puedePredecirPartido(partido);
           
           return (
             <div key={partido.NRO_PARTIDO} className="bg-white rounded-lg shadow-md p-6">
@@ -513,9 +548,7 @@ const PronosticosQuinielaPage = () => {
                 {getEstadoBadge(partido)}
               </div>
 
-              {/* ============================================ */}
-              {/* CASO 1: Partido FINALIZADO (con resultado real) */}
-              {/* ============================================ */}
+              {/* Partido FINALIZADO */}
               {partido.ESTADO_USUARIO === 'FINALIZADO' && (
                 <div className="text-center py-4 bg-gray-50 rounded-lg">
                   <p className="text-gray-600">Resultado final</p>
@@ -535,9 +568,7 @@ const PronosticosQuinielaPage = () => {
                 </div>
               )}
 
-              {/* ============================================ */}
-              {/* CASO 2: Partido con PREDICCIÓN ENVIADA (pendiente o finalizado) */}
-              {/* ============================================ */}
+              {/* Partido con PREDICCIÓN ENVIADA */}
               {partido.ESTADO_USUARIO === 'YA_PREDICHO' && (
                 <div className="text-center py-4 bg-gray-50 rounded-lg">
                   <p className="text-gray-600">
@@ -554,22 +585,16 @@ const PronosticosQuinielaPage = () => {
                     </p>
                     {partido.ESTADO_CALCULADO === 'FINALIZADO' && (
                       partido.PUNTOS_OBTENIDOS > 0 ? (
-                        <p className="text-green-600 font-medium">
-                          ✅ Obtuviste {partido.PUNTOS_OBTENIDOS} puntos
-                        </p>
+                        <p className="text-green-600 font-medium">✅ Obtuviste {partido.PUNTOS_OBTENIDOS} puntos</p>
                       ) : (
-                        <p className="text-red-500 font-medium">
-                          ❌ No obtuviste puntos
-                        </p>
+                        <p className="text-red-500 font-medium">❌ No obtuviste puntos</p>
                       )
                     )}
                   </div>
                 </div>
               )}
 
-              {/* ============================================ */}
-              {/* CASO 3: Partido CERRADO (en curso, no se puede predecir) */}
-              {/* ============================================ */}
+              {/* Partido CERRADO (en curso) */}
               {partido.ESTADO_USUARIO === 'CERRADO' && (
                 <div className="text-center py-4 bg-gray-50 rounded-lg">
                   <p className="text-gray-600">Partido en curso</p>
@@ -577,12 +602,9 @@ const PronosticosQuinielaPage = () => {
                 </div>
               )}
 
-              {/* ============================================ */}
-              {/* CASO 4: Partido DISPONIBLE para predicción */}
-              {/* ============================================ */}
+              {/* Partido DISPONIBLE para predicción */}
               {partido.ESTADO_USUARIO === 'DISPONIBLE' && !partido.YA_PREDICHO && (
                 <>
-                  {/* Mensaje informativo (tiempo restante) */}
                   {mensajeInfo && (
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-blue-700 text-sm flex items-center justify-center gap-2">
@@ -592,8 +614,7 @@ const PronosticosQuinielaPage = () => {
                     </div>
                   )}
 
-                  {/* Badge de tiempo restante */}
-                  {tiempoTexto && (
+                  {tiempoTexto && !prediccionesBloqueadas && (
                     <div className="mb-3 text-center">
                       <span className="inline-flex items-center gap-1 text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                         <Clock className="h-3 w-3" />
@@ -602,60 +623,82 @@ const PronosticosQuinielaPage = () => {
                     </div>
                   )}
 
-                  {/* Inputs para ingresar goles */}
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-6">
-                    {/* Equipo local */}
-                    <div className="text-center">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {partido.EQUIPO_1_NOMBRE}
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={partido.GOLES_LOCAL_PRED ?? ''}
-                        onChange={(e) => handlePrediccionChange(partido.NRO_PARTIDO, 'GOLES_LOCAL_PRED', e.target.value)}
-                        className="w-24 text-center text-2xl px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="?"
-                      />
-                    </div>
-                    
-                    <span className="text-2xl font-bold text-gray-400">VS</span>
-                    
-                    {/* Equipo visitante */}
-                    <div className="text-center">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {partido.EQUIPO_2_NOMBRE}
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={partido.GOLES_VISITANTE_PRED ?? ''}
-                        onChange={(e) => handlePrediccionChange(partido.NRO_PARTIDO, 'GOLES_VISITANTE_PRED', e.target.value)}
-                        className="w-24 text-center text-2xl px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="?"
-                      />
-                    </div>
-                  </div>
+                  {/* Inputs para ingresar goles - solo si NO está bloqueada */}
+                  {!prediccionesBloqueadas ? (
+                    <>
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-6">
+                        <div className="text-center">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {partido.EQUIPO_1_NOMBRE}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={partido.GOLES_LOCAL_PRED ?? ''}
+                            onChange={(e) => handlePrediccionChange(partido.NRO_PARTIDO, 'GOLES_LOCAL_PRED', e.target.value)}
+                            className="w-24 text-center text-2xl px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="?"
+                          />
+                        </div>
+                        
+                        <span className="text-2xl font-bold text-gray-400">VS</span>
+                        
+                        <div className="text-center">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {partido.EQUIPO_2_NOMBRE}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={partido.GOLES_VISITANTE_PRED ?? ''}
+                            onChange={(e) => handlePrediccionChange(partido.NRO_PARTIDO, 'GOLES_VISITANTE_PRED', e.target.value)}
+                            className="w-24 text-center text-2xl px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="?"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Botón guardar */}
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => enviarPrediccion(partido)}
-                      disabled={enviando[partido.NRO_PARTIDO]}
-                      className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
-                    >
-                      <Save className="h-4 w-4" />
-                      {enviando[partido.NRO_PARTIDO] ? 'Guardando...' : 'Guardar Predicción'}
-                    </button>
-                  </div>
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => enviarPrediccion(partido)}
+                          disabled={enviando[partido.NRO_PARTIDO]}
+                          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                        >
+                          <Save className="h-4 w-4" />
+                          {enviando[partido.NRO_PARTIDO] ? 'Guardando...' : 'Guardar Predicción'}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg">
+                      <p className="text-red-500 flex items-center justify-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        Predicciones bloqueadas por el administrador
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Animaciones CSS */}
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(-100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        .animate-slide-down { animation: slideDown 0.3s ease-out; }
+      `}</style>
     </div>
   );
 };

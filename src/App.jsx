@@ -2,20 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import NotificationInitializer from './components/NotificationInitializer';
+import { io } from 'socket.io-client';
+
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Navbar from './components/common/Navbar';
+
 import HomePage from './pages/HomePage';
 import QuinielasPage from './pages/QuinielasPage';
 import QuinielaDetailPage from './pages/QuinielaDetailPage';
 import RankingPage from './pages/RankingPage';
 import MisPrediccionesPage from './pages/MisPrediccionesPage';
-import AdminPage from './pages/AdminPage';
 import MisQuinielasPage from './pages/MisQuinielasPage';
 import PronosticosQuinielaPage from './pages/PronosticosQuinielaPage';
 import MisAciertosPage from './pages/MisAciertosPage';
 
+import PushNotificaciones from './components/PushNotificaciones';
+
 // Admin
+import AdminPage from './pages/AdminPage';
 import CrearQuinielaPage from './pages/admin/CrearQuinielaPage';
 import CrearEquipoPage from './pages/admin/CrearEquipoPage';
 import CrearGrupoPage from './pages/admin/CrearGrupoPage';
@@ -29,107 +35,150 @@ import CampeonatoDetallePage from './pages/admin/CampeonatoDetallePage';
 import QuinielaDetallePage from './pages/admin/QuinielaDetallePage';
 
 let deferredPromptGlobal = null;
+let socketPresencia = null;
 
-// 🔥 RUTAS PROTEGIDAS - TEMPORALMENTE DESACTIVADAS PARA NGROK
+// ============================================
+// 🔒 PRIVATE ROUTE
+// ============================================
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, user } = useAuth();
-  //console.log('🔒 PrivateRoute - isAuthenticated:', isAuthenticated());
-  //console.log('🔒 PrivateRoute - user:', user);
-  
-  // 🔥 TEMPORAL: Siempre permitir acceso para pruebas
-  //console.log('🔓 Acceso permitido temporalmente (modo ngrok)');
+  const { user, loading, isAuthenticated } = useAuth();
+
+  if (loading) return null;
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
-  
-  // Código original (comentado)
-  // return isAuthenticated() ? children : <Navigate to="/login" replace />;
 };
 
-// 🔥 RUTAS ADMIN - TEMPORALMENTE DESACTIVADAS
+// ============================================
+// 👑 ADMIN ROUTE
+// ============================================
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, user } = useAuth();
-  //console.log('👑 AdminRoute - isAdmin:', isAdmin());
-  //console.log('👑 AdminRoute - user:', user);
-  
-  // 🔥 TEMPORAL: Siempre permitir acceso para pruebas
-  //console.log('🔓 Acceso admin permitido temporalmente (modo ngrok)');
+  const { user, loading, isAuthenticated } = useAuth();
+
+  if (loading) return null;
+
+  const isAdmin = user?.U_ROL === 'ADMIN';
+
+  if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
-  
-  // Código original (comentado)
-  // return isAuthenticated() && isAdmin() ? children : <Navigate to="/" replace />;
 };
 
-// Layout
-const PrivateLayout = ({ children }) => {
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        {children}
-      </main>
-    </div>
-  );
-};
+// ============================================
+// 📦 LAYOUT
+// ============================================
+const PrivateLayout = ({ children }) => (
+  <div className="min-h-screen bg-gray-100">
+    <Navbar />
+    <main className="container mx-auto px-4 py-8">
+      {children}
+    </main>
+  </div>
+);
 
+// ============================================
+// ROUTES
+// ============================================
 function AppRoutes() {
   return (
     <>
       <Routes>
-        {/* Públicas */}
+        {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Privadas - Todas accesibles temporalmente */}
-        <Route path="/" element={<PrivateLayout><HomePage /></PrivateLayout>} />
-        <Route path="/quinielas" element={<PrivateLayout><QuinielasPage /></PrivateLayout>} />
-        <Route path="/quinielas/:id" element={<PrivateLayout><QuinielaDetailPage /></PrivateLayout>} />
-        <Route path="/ranking/:id" element={<PrivateLayout><RankingPage /></PrivateLayout>} />
-        <Route path="/mis-predicciones" element={<PrivateLayout><MisPrediccionesPage /></PrivateLayout>} />
-        <Route path="/mis-aciertos" element={<PrivateLayout><MisAciertosPage /></PrivateLayout>} />
-        <Route path="/mis-quinielas" element={<PrivateLayout><MisQuinielasPage /></PrivateLayout>} />
-        <Route path="/quinielas/:id/pronosticos" element={<PrivateLayout><PronosticosQuinielaPage /></PrivateLayout>} />
+        {/* PRIVATE */}
+        <Route path="/" element={<PrivateRoute><PrivateLayout><HomePage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/quinielas" element={<PrivateRoute><PrivateLayout><QuinielasPage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/quinielas/:id" element={<PrivateRoute><PrivateLayout><QuinielaDetailPage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/ranking/:id" element={<PrivateRoute><PrivateLayout><RankingPage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/mis-predicciones" element={<PrivateRoute><PrivateLayout><MisPrediccionesPage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/mis-aciertos" element={<PrivateRoute><PrivateLayout><MisAciertosPage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/mis-quinielas" element={<PrivateRoute><PrivateLayout><MisQuinielasPage /></PrivateLayout></PrivateRoute>} />
+        <Route path="/quinielas/:id/pronosticos" element={<PrivateRoute><PrivateLayout><PronosticosQuinielaPage /></PrivateLayout></PrivateRoute>} />
 
-        {/* Admin - Todas accesibles temporalmente */}
-        <Route path="/admin" element={<PrivateLayout><AdminPage /></PrivateLayout>} />
-        <Route path="/admin/campeonatos" element={<PrivateLayout><CampeonatosPage /></PrivateLayout>} />
-        <Route path="/admin/campeonatos/:c_campeonato" element={<PrivateLayout><CampeonatoDetallePage /></PrivateLayout>} />
-        <Route path="/admin/campeonatos/:c_campeonato/quinielas" element={<PrivateLayout><QuinielasPorCampeonatoPage /></PrivateLayout>} />
-        <Route path="/admin/crear-quiniela" element={<PrivateLayout><CrearQuinielaPage /></PrivateLayout>} />
-        <Route path="/admin/quinielas/:id" element={<PrivateLayout><QuinielaDetallePage /></PrivateLayout>} />
-        <Route path="/admin/crear-equipo" element={<PrivateLayout><CrearEquipoPage /></PrivateLayout>} />
-        <Route path="/admin/crear-grupo" element={<PrivateLayout><CrearGrupoPage /></PrivateLayout>} />
-        <Route path="/admin/crear-partido" element={<PrivateLayout><CrearPartidoPage /></PrivateLayout>} />
-        <Route path="/admin/inscribir-usuario" element={<PrivateLayout><InscribirUsuarioPage /></PrivateLayout>} />
-        <Route path="/admin/resultados" element={<PrivateLayout><SeleccionarQuinielaResultados /></PrivateLayout>} />
-        <Route path="/admin/quinielas/:id/resultados" element={<PrivateLayout><ResultadosPage /></PrivateLayout>} />
+        {/* ADMIN */}
+        <Route path="/admin" element={<AdminRoute><PrivateLayout><AdminPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/campeonatos" element={<AdminRoute><PrivateLayout><CampeonatosPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/campeonatos/:c_campeonato" element={<AdminRoute><PrivateLayout><CampeonatoDetallePage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/campeonatos/:c_campeonato/quinielas" element={<AdminRoute><PrivateLayout><QuinielasPorCampeonatoPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/crear-quiniela" element={<AdminRoute><PrivateLayout><CrearQuinielaPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/quinielas/:id" element={<AdminRoute><PrivateLayout><QuinielaDetallePage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/crear-equipo" element={<AdminRoute><PrivateLayout><CrearEquipoPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/crear-grupo" element={<AdminRoute><PrivateLayout><CrearGrupoPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/crear-partido" element={<AdminRoute><PrivateLayout><CrearPartidoPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/inscribir-usuario" element={<AdminRoute><PrivateLayout><InscribirUsuarioPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/resultados" element={<AdminRoute><PrivateLayout><SeleccionarQuinielaResultados /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/quinielas/:id/resultados" element={<AdminRoute><PrivateLayout><ResultadosPage /></PrivateLayout></AdminRoute>} />
       </Routes>
 
       <Toaster position="top-right" />
+      <PushNotificaciones />
     </>
   );
 }
 
+// ============================================
+// COMPONENTE DE PRESENCIA (dentro de AuthProvider)
+// ============================================
+function PresenceManager() {
+  const { isAuthenticated, user } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated && user && user.U_CODIGO) {
+      if (!socketPresencia) {
+        socketPresencia = io('http://localhost:3000', {
+          transports: ['websocket', 'polling'],
+          reconnection: true
+        });
+
+        socketPresencia.on('connect', () => {
+          console.log('🔌 Conectado a servidor de presencia');
+          socketPresencia.emit('registrar-usuario', {
+            u_codigo: user.U_CODIGO,
+            nombre: `${user.U_NOMBRE || ''} ${user.U_APELLIDO || ''}`.trim() || user.U_CORREO
+          });
+        });
+
+        socketPresencia.on('sesion-duplicada', (data) => {
+          console.warn('⚠️ Sesión duplicada detectada:', data);
+          alert('⚠️ Tu sesión se ha abierto en otro dispositivo. Serás redirigido al login.');
+          sessionStorage.clear();
+          window.location.href = '/login';
+        });
+      }
+    } else if (!isAuthenticated && socketPresencia) {
+      socketPresencia.disconnect();
+      socketPresencia = null;
+    }
+
+    return () => {
+      if (socketPresencia && !isAuthenticated) {
+        socketPresencia.disconnect();
+        socketPresencia = null;
+      }
+    };
+  }, [isAuthenticated, user]);
+
+  return null;
+}
+
+// ============================================
+// APP
+// ============================================
 function App() {
   const [puedeInstalar, setPuedeInstalar] = useState(false);
 
-  // 🔥 Detectar si estamos en ngrok
-  const isNgrok = window.location.hostname.includes('ngrok-free.app');
-  
   useEffect(() => {
-    if (isNgrok) {
-      //console.log('🌐 Modo ngrok detectado');
-      // Forzar token si no existe
-      if (!localStorage.getItem('token')) {
-        localStorage.setItem('token', 'ngrok-test-token');
-        localStorage.setItem('user', JSON.stringify({
-          U_CODIGO: '00656',
-          U_ROL: 'ADMIN',
-          U_CORREO: 'admin@quiniela.com'
-        }));
-        //console.log('✅ Token de prueba creado automáticamente');
-      }
-    }
-    
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone;
+
     if (isStandalone) return;
 
     const handler = (e) => {
@@ -142,12 +191,14 @@ function App() {
     window.addEventListener('appinstalled', () => setPuedeInstalar(false));
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, [isNgrok]);
+  }, []);
 
   const instalarApp = async () => {
     if (!deferredPromptGlobal) return;
+
     deferredPromptGlobal.prompt();
     await deferredPromptGlobal.userChoice;
+
     deferredPromptGlobal = null;
     setPuedeInstalar(false);
   };
@@ -155,9 +206,14 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <PresenceManager />
         <AppRoutes />
+        <NotificationInitializer />
         {puedeInstalar && (
-          <button onClick={instalarApp} className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          <button
+            onClick={instalarApp}
+            className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50"
+          >
             📲 Instalar App
           </button>
         )}
