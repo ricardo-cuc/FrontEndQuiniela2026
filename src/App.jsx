@@ -209,7 +209,7 @@ function App() {
       <AuthProvider>
         <PresenceManager />
         <AppRoutes />
-        <NotificationInitializer />
+        {/* <NotificationInitializer /> */}
         {puedeInstalar && (
           <button
             onClick={instalarApp}
