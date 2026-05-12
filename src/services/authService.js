@@ -33,18 +33,11 @@ export const authService = {
     return newToken;
   },
 
-  // ✅ LOGOUT CORREGIDO - Sin llamada al backend (evita error 404)
   logout: () => {
-    // Limpiar sessionStorage
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('user');
-    
-    // Limpiar headers de axios
     delete api.defaults.headers.common['Authorization'];
-    
-    // Redirigir al login
-    window.location.href = '/login';
   },
 
   getCurrentUser: () => {
