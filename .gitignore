@@ -89,3 +89,4 @@ chrome-user-data/
 .wrangler
 .dev.vars*
 !.dev.vars.example
+.vercel
