@@ -1,3 +1,4 @@
+// services/authService.js
 import api from './api';
 
 export const authService = {
@@ -7,7 +8,6 @@ export const authService = {
     const data = response.data;
 
     if (data?.token) {
-      // ✅ CAMBIADO: localStorage → sessionStorage
       sessionStorage.setItem('token', data.token);
       if (data.refreshToken) {
         sessionStorage.setItem('refreshToken', data.refreshToken);
@@ -20,7 +20,6 @@ export const authService = {
   },
 
   refreshToken: async () => {
-    // ✅ CAMBIADO: localStorage → sessionStorage
     const refreshToken = sessionStorage.getItem('refreshToken');
     if (!refreshToken) throw new Error('No refresh token');
     
@@ -34,26 +33,21 @@ export const authService = {
     return newToken;
   },
 
-  logout: async () => {
-    // ✅ CAMBIADO: localStorage → sessionStorage
-    const refreshToken = sessionStorage.getItem('refreshToken');
-    try {
-      if (refreshToken) {
-        await api.post('/api/auth/logout', { refreshToken });
-      }
-    } catch (e) {
-      console.warn('logout error backend', e);
-    }
-    // ✅ CAMBIADO: removeItem de sessionStorage
+  // ✅ LOGOUT CORREGIDO - Sin llamada al backend (evita error 404)
+  logout: () => {
+    // Limpiar sessionStorage
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('user');
+    
+    // Limpiar headers de axios
     delete api.defaults.headers.common['Authorization'];
+    
+    // Redirigir al login
     window.location.href = '/login';
   },
 
   getCurrentUser: () => {
-    // ✅ CAMBIADO: localStorage → sessionStorage
     const user = sessionStorage.getItem('user');
     const token = sessionStorage.getItem('token');
     if (token) {
