@@ -1,6 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { authService } from '../services/authService';
+import api from '../services/api'; // ← Agrega esta importación
 
 const AuthContext = createContext();
 
@@ -29,6 +30,12 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // ✅ AGREGAR FUNCIÓN REGISTER
+  const register = async (userData) => {
+    const response = await api.post('/api/usuarios/register', userData);
+    return response.data;
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -40,6 +47,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    register,  // ← Agrega register aquí
     logout,
     loading,
     isAuthenticated,
