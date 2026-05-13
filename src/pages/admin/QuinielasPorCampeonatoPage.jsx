@@ -66,7 +66,7 @@ const QuinielasPorCampeonatoPage = () => {
     <div>
       <Link to="/admin/campeonatos" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Volver a Campeonatos
+        Volver a Campeona
       </Link>
 
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
