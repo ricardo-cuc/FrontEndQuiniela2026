@@ -1,8 +1,11 @@
 // components/participantes/ModalParticipantes.jsx
-import React, { useState, useEffect } from 'react';
-import { X, Users, Smile, Send } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Users, Smile, Send, Wifi, WifiOff } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { io } from 'socket.io-client';
+
+const API_URL = import.meta.env.VITE_API;
 
 const emojisDisponibles = [
   { id: '👍', emoji: '👍', nombre: 'Like' },
@@ -22,24 +25,78 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [nuevoMensaje, setNuevoMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [showEmojis, setShowEmojis] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
-  // Cargar datos al abrir el modal
+  // Conectar al socket cuando se abre el modal
   useEffect(() => {
     if (isOpen && quinielaId) {
+      // Crear conexión socket si no existe
+      if (!socketRef.current) {
+        socketRef.current = io(API_URL, {
+          transports: ['websocket', 'polling'],
+          reconnection: true
+        });
+
+        socketRef.current.on('connect', () => {
+          console.log('🔌 Conectado al servidor de chat');
+          setIsConnected(true);
+          socketRef.current.emit('join-quiniela', quinielaId);
+        });
+
+        socketRef.current.on('disconnect', () => {
+          console.log('🔌 Desconectado del chat');
+          setIsConnected(false);
+        });
+
+        // Escuchar nuevos mensajes
+        socketRef.current.on('nuevo-mensaje-chat', (nuevoMensaje) => {
+          console.log('📢 Nuevo mensaje recibido:', nuevoMensaje);
+          setMensajes(prev => [nuevoMensaje, ...prev]);
+        });
+
+        // Escuchar nuevas reacciones
+        socketRef.current.on('nueva-reaccion', (reaccion) => {
+          console.log('😊 Nueva reacción recibida:', reaccion);
+          setParticipantes(prev => prev.map(p => 
+            p.U_CODIGO === reaccion.receptorId
+              ? { ...p, reacciones: [...(p.reacciones || []), { emoji: reaccion.emoji, de: reaccion.emisorId }] }
+              : p
+          ));
+        });
+      } else {
+        // Si ya existe, unirse a la sala
+        socketRef.current.emit('join-quiniela', quinielaId);
+      }
+
       cargarDatos();
+
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.emit('leave-quiniela', quinielaId);
+        }
+      };
     }
   }, [isOpen, quinielaId]);
+
+  // Auto-scroll al nuevo mensaje
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [mensajes]);
 
   const cargarDatos = async () => {
     try {
       setLoading(true);
       
-      // Cargar participantes
-      const participantesRes = await api.get(`/api/quinielas/${quinielaId}/participantes`);
-      setParticipantes(participantesRes.data.data || []);
+      const [participantesRes, mensajesRes] = await Promise.all([
+        api.get(`/api/quinielas/${quinielaId}/participantes`),
+        api.get(`/api/quinielas/${quinielaId}/mensajes`)
+      ]);
       
-      // Cargar mensajes
-      const mensajesRes = await api.get(`/api/quinielas/${quinielaId}/mensajes`);
+      setParticipantes(participantesRes.data.data || []);
       setMensajes(mensajesRes.data.data || []);
       
     } catch (error) {
@@ -60,8 +117,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         tipo: 'texto'
       });
       
-      // Agregar mensaje a la lista
-      setMensajes(prev => [response.data.data, ...prev]);
       setNuevoMensaje('');
       toast.success('Mensaje enviado');
       
@@ -100,9 +155,15 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             <h2 className="text-xl font-bold">Participantes</h2>
             <p className="text-sm text-indigo-200">{quinielaNombre}</p>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white">
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
+              {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+              <span>{isConnected ? 'Conectado' : 'Desconectado'}</span>
+            </div>
+            <button onClick={onClose} className="text-white/70 hover:text-white">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Contenido */}
@@ -138,7 +199,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                         </div>
                       </div>
                       
-                      {/* Botón de emojis */}
                       <div className="relative">
                         <button
                           onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
@@ -165,6 +225,16 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                         )}
                       </div>
                     </div>
+                    {/* Mostrar reacciones recibidas */}
+                    {p.reacciones?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {p.reacciones.map((r, idx) => (
+                          <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5">
+                            {r.emoji}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -195,6 +265,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                   </div>
                 ))
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input de mensaje */}
