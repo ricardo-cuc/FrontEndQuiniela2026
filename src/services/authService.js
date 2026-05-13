@@ -1,5 +1,6 @@
 // services/authService.js
 import api from './api';
+import { scheduleTokenRefresh, clearTokenSchedule } from './tokenScheduler';
 
 const TOKEN_KEY = 'token';
 const REFRESH_TOKEN_KEY = 'refreshToken';
@@ -10,7 +11,7 @@ const isTokenExpired = (token) => {
   if (!token) return true;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    const exp = payload.exp * 1000; // Convertir a milisegundos
+    const exp = payload.exp * 1000;
     const expired = Date.now() >= exp;
     
     if (expired) {
@@ -57,34 +58,14 @@ export const authService = {
         sessionStorage.setItem(USER_KEY, JSON.stringify(userData));
         api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
         
-        // Programar refresh automático si es necesario
-        this.scheduleTokenRefresh(data.token);
+        // ✅ Programar refresh automático después del login
+        scheduleTokenRefresh();
       }
 
       return data;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
-    }
-  },
-
-  // ✅ Función para renovar token automáticamente
-  scheduleTokenRefresh: (token) => {
-    const remainingTime = getTokenRemainingTime(token);
-    // Si queda menos de 5 minutos, programar refresh en el momento adecuado
-    const refreshThreshold = 5 * 60 * 1000; // 5 minutos antes de expirar
-    const timeToRefresh = Math.max(remainingTime - refreshThreshold, 0);
-    
-    if (timeToRefresh > 0 && timeToRefresh < 30 * 60 * 1000) { // Solo si queda menos de 30 min
-      setTimeout(async () => {
-        console.log('Intentando renovar token automáticamente...');
-        try {
-          await authService.refreshToken();
-        } catch (error) {
-          console.error('Error al renovar token automáticamente:', error);
-          // No hacer logout automático aquí, dejar que el interceptor maneje el 401
-        }
-      }, timeToRefresh);
     }
   },
 
@@ -100,8 +81,8 @@ export const authService = {
         sessionStorage.setItem(TOKEN_KEY, newToken);
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         
-        // Programar próximo refresh
-        this.scheduleTokenRefresh(newToken);
+        // ✅ Programar próximo refresh después de renovar
+        scheduleTokenRefresh();
         
         console.log('Token renovado exitosamente');
         return newToken;
@@ -116,6 +97,9 @@ export const authService = {
   },
 
   logout: () => {
+    // ✅ Limpiar el scheduler programado
+    clearTokenSchedule();
+    
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(USER_KEY);
@@ -127,10 +111,9 @@ export const authService = {
     const userStr = sessionStorage.getItem(USER_KEY);
     const token = sessionStorage.getItem(TOKEN_KEY);
     
-    // ✅ Verificar si el token expiró
     if (token && isTokenExpired(token)) {
       console.log('Token expirado al obtener usuario, cerrando sesión');
-      authService.logout();
+      this.logout();
       return null;
     }
     
@@ -150,7 +133,6 @@ export const authService = {
     return null;
   },
 
-  // ✅ Método para obtener el token actual (válido)
   getToken: () => {
     const token = sessionStorage.getItem(TOKEN_KEY);
     if (token && !isTokenExpired(token)) {
@@ -159,15 +141,13 @@ export const authService = {
     return null;
   },
 
-  // ✅ Método para verificar si hay una sesión activa
   isAuthenticated: () => {
     const token = sessionStorage.getItem(TOKEN_KEY);
     return token !== null && !isTokenExpired(token);
   },
 
-  // ✅ Método para actualizar datos del usuario sin hacer login
   updateUser: (userData) => {
-    const currentUser = authService.getCurrentUser();
+    const currentUser = this.getCurrentUser();
     if (currentUser) {
       const updatedUser = { ...currentUser, ...userData };
       sessionStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
@@ -176,7 +156,6 @@ export const authService = {
     return null;
   },
 
-  // ✅ Método para obtener tiempo restante de sesión
   getSessionRemainingTime: () => {
     const token = sessionStorage.getItem(TOKEN_KEY);
     return getTokenRemainingTime(token);
