@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { User, LogOut, Shield } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout, isAdmin } = useAuth(); // isAdmin es booleano
+  const { user, logout, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -47,6 +47,18 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ✅ Mostrar loading mientras se verifica autenticación
+  if (loading) {
+    return (
+      <nav className="bg-indigo-600 text-white shadow-lg fixed top-0 left-0 right-0 z-50 h-16">
+        <div className="container mx-auto px-4 flex items-center justify-center h-full">
+          <div className="animate-pulse">Cargando...</div>
+        </div>
+      </nav>
+    );
+  }
+
+  // ✅ Si no hay usuario, no mostrar nada (las rutas protegidas redirigirán)
   if (!user) return null;
 
   return (
@@ -73,7 +85,7 @@ const Navbar = () => {
             </Link>
 
             {/* Menú de administrador - solo visible para admins en desktop */}
-            {isAdmin && (  // ✅ Corregido: quitados los paréntesis de función
+            {isAdmin && (
               <div className="hidden md:flex items-center space-x-4">
                 <Link 
                   to="/admin" 
@@ -102,13 +114,16 @@ const Navbar = () => {
                     <p className="text-sm font-semibold text-gray-900">
                       {user.U_NOMBRE} {user.U_APELLIDO}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {user.U_EMAIL || 'usuario@quiniela.com'}
-                    </p>
+                    {/* ✅ SOLO mostrar email si existe y no es null/undefined */}
+                    {user.U_EMAIL && user.U_EMAIL !== 'null' && user.U_EMAIL !== 'undefined' && (
+                      <p className="text-xs text-gray-500 mt-1 truncate">
+                        {user.U_EMAIL}
+                      </p>
+                    )}
                   </div>
                   <div className="py-1">
                     {/* Panel de administrador - solo visible para admins */}
-                    {isAdmin && (  // ✅ Corregido: quitados los paréntesis de función
+                    {isAdmin && (
                       <>
                         <Link
                           to="/admin"
