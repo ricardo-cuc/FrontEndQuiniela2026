@@ -469,7 +469,7 @@ const PronosticosQuinielaPage = () => {
             <h1 className="text-2xl font-bold">{quiniela?.NOMBRE || 'Quiniela'}</h1>
             <p className="mt-2">{quiniela?.DESCRIPCION || 'Sin descripción'}</p>
             <div className="mt-4 flex flex-wrap gap-4 text-sm">
-              <span>🏆 {quiniela?.C_CAMPEONATO || 'M26'}</span>
+              <span>🏆 {quiniela?.C_CAMPEONATO}</span>
               <span>⭐ Tus puntos: {quiniela?.PUNTOS_TOTALES || 0}</span>
               {isConnected && <span className="text-green-300">● Tiempo real</span>}
             </div>
