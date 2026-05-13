@@ -66,7 +66,7 @@ const CampeonatoDetallePage = () => {
   // Enviar resultado del partido
   const enviarResultado = async (partido) => {
     const resultado = resultadosPendientes[partido.NRO_PARTIDO];
-    
+
     if (!resultado || resultado.GOLES_LOCAL === undefined || resultado.GOLES_VISITANTE === undefined) {
       toast.error('Ingresa los goles para ambos equipos');
       return;
@@ -80,14 +80,14 @@ const CampeonatoDetallePage = () => {
         q_goles_e2: resultado.GOLES_VISITANTE
       });
       toast.success(`Resultado registrado: ${partido.EQUIPO_1_NOMBRE} ${resultado.GOLES_LOCAL} - ${resultado.GOLES_VISITANTE} ${partido.EQUIPO_2_NOMBRE}`);
-      
+
       // Limpiar el estado de este partido
       setResultadosPendientes(prev => {
         const newState = { ...prev };
         delete newState[partido.NRO_PARTIDO];
         return newState;
       });
-      
+
       // Recargar partidos
       await cargarPartidos();
     } catch (error) {
@@ -113,10 +113,10 @@ const CampeonatoDetallePage = () => {
 
   return (
     <div>
-      <Link to="/admin/campeonatos" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
+      {/* <Link to="/admin/campeonatos" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" />
         Volver a Campeonatoss
-      </Link>
+      </Link> */}
 
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
         <div className="flex items-center justify-between">
