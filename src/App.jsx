@@ -44,7 +44,7 @@ let socketPresencia = null;
 const PrivateRoute = ({ children }) => {
   const { user, loading, isAuthenticated } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -59,7 +59,7 @@ const PrivateRoute = ({ children }) => {
 const AdminRoute = ({ children }) => {
   const { user, loading, isAuthenticated } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
 
   const isAdmin = user?.U_ROL === 'ADMIN';
 
@@ -81,6 +81,35 @@ const PrivateLayout = ({ children }) => (
     </main>
   </div>
 );
+
+// ============================================
+// 🕐 SESSION MONITOR - Escucha eventos de expiración
+// ============================================
+function SessionMonitor() {
+  const { logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      if (isAuthenticated) {
+        console.log('Sesión expirada, redirigiendo al login...');
+        logout();
+        navigate('/login', { 
+          state: { message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' }
+        });
+      }
+    };
+
+    // Escuchar evento personalizado de expiración
+    window.addEventListener('sessionExpired', handleSessionExpired);
+    
+    return () => {
+      window.removeEventListener('sessionExpired', handleSessionExpired);
+    };
+  }, [logout, navigate, isAuthenticated]);
+
+  return null;
+}
 
 // ============================================
 // ROUTES
@@ -207,9 +236,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <SessionMonitor /> {/* ✅ Monitor de sesión expirada */}
         <PresenceManager />
         <AppRoutes />
-        {/* <NotificationInitializer /> */}
         {puedeInstalar && (
           <button
             onClick={instalarApp}
