@@ -183,9 +183,7 @@ const HomePage = () => {
         </div>
       )}
 
-      {/* Indicador de conexión Socket.IO */}
-      <SocketStatus />
-      
+ 
 
       {/* Banner de bienvenida */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-8 text-white">
