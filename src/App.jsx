@@ -357,9 +357,9 @@ function App() {
         <SocketManager />
         <AppRoutes />
         <Toaster position="top-right" />
-        <PushNotificaciones />
+        {/* <PushNotificaciones /> */}
         <SocketStatus />
-        <FloatingHelpWidget /> {/* ✅ Widget de ayuda flotante */}
+        {/* <FloatingHelpWidget /> ✅ Widget de ayuda flotante */}
         {puedeInstalar && (
           <button onClick={instalarApp} className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
             📲 Instalar App
