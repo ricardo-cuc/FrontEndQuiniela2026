@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -11,8 +11,10 @@ import {
   EyeOff,
   ShieldCheck,
   ChevronRight,
+  HelpCircle,
+  X,
+  Info
 } from 'lucide-react';
-
 
 const Login = () => {
   const { login } = useAuth();
@@ -21,11 +23,26 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showAyudaModal, setShowAyudaModal] = useState(false);
+  const [esPrimeraVez, setEsPrimeraVez] = useState(false);
 
   const [formData, setFormData] = useState({
     u_correo: '',
     u_password: '',
   });
+
+  useEffect(() => {
+    // Verificar si es la primera vez que ve el login
+    const yaVio = localStorage.getItem('visto_login_ayuda');
+    if (!yaVio) {
+      setEsPrimeraVez(true);
+    }
+  }, []);
+
+  const cerrarAyudaPermanente = () => {
+    localStorage.setItem('visto_login_ayuda', 'true');
+    setEsPrimeraVez(false);
+  };
 
   const socialLinks = [
     {
@@ -77,10 +94,16 @@ const Login = () => {
         rememberMe,
       });
 
-      toast.success('Login exitoso');
+      toast.success('¡Bienvenido de vuelta!');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.mensaje || 'Error al iniciar sesión');
+      let mensaje = error.response?.data?.mensaje || 'Error al iniciar sesión';
+      if (error.response?.status === 401) {
+        mensaje = 'Correo o contraseña incorrectos';
+      } else if (error.response?.status === 404) {
+        mensaje = 'Usuario no encontrado. ¿Necesitas registrarte?';
+      }
+      toast.error(mensaje);
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +111,95 @@ const Login = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-950">
+      {/* Modal de ayuda para nuevos usuarios */}
+      {showAyudaModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-5 flex justify-between items-center">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-indigo-600" />
+                ¿Cómo empezar?
+              </h2>
+              <button onClick={() => setShowAyudaModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-5">
+              <div className="border-l-4 border-green-500 pl-4">
+                <h3 className="font-semibold text-green-700 flex items-center gap-2">
+                  <span className="bg-green-100 text-green-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+                  ¿No tienes cuenta? Regístrate
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Si es tu primera vez, haz clic en <strong>"Regístrate aquí"</strong> para crear tu perfil.
+                </p>
+              </div>
+
+              <div className="border-l-4 border-blue-500 pl-4">
+                <h3 className="font-semibold text-blue-700 flex items-center gap-2">
+                  <span className="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
+                  Inicia sesión
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Usa tu correo electrónico y contraseña para acceder a tu cuenta.
+                </p>
+              </div>
+
+              <div className="border-l-4 border-purple-500 pl-4">
+                <h3 className="font-semibold text-purple-700 flex items-center gap-2">
+                  <span className="bg-purple-100 text-purple-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
+                  ¿Y después del login?
+                </h3>
+                <div className="mt-2 space-y-2 text-sm text-gray-600">
+                  <p>✅ Una vez dentro, verás el panel principal</p>
+                  <p>✅ Para participar, necesitas que un <strong>administrador te inscriba</strong> en una quiniela</p>
+                  <p>✅ Si ya estás inscrito, ve a <strong>"Mis Quinielas"</strong> para hacer tus pronósticos</p>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
+                <h3 className="font-semibold text-yellow-800 flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  ¿Problemas para acceder?
+                </h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Contacta al administrador de la quiniela o al soporte técnico.
+                </p>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t p-4">
+              <button
+                onClick={() => setShowAyudaModal(false)}
+                className="w-full bg-indigo-600 text-white py-2.5 rounded-xl hover:bg-indigo-700 transition font-medium"
+              >
+                Entendido, ¡empecemos!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner de bienvenida para primera vez */}
+      {esPrimeraVez && (
+        <div className="fixed top-4 left-4 right-4 z-40 max-w-md mx-auto md:left-auto md:right-4">
+          <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl shadow-xl p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🎉</span>
+              <div className="flex-1">
+                <p className="font-semibold">¡Bienvenido a Quiniela Lucalza!</p>
+                <p className="text-sm opacity-95 mt-1">
+                                  </p>
+              </div>
+              <button onClick={cerrarAyudaPermanente} className="text-white/70 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fondo decorativo */}
       <div className="absolute inset-0">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-indigo-600/30 blur-3xl" />
@@ -137,7 +249,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Redes Sociales en panel izquierdo */}
             <div className="mt-8 pt-4 border-t border-white/10">
               <p className="text-sm text-slate-400 mb-3">Síguenos en redes</p>
               <div className="flex gap-3">
@@ -196,7 +307,6 @@ const Login = () => {
               </div>
 
               <form className="space-y-5" onSubmit={handleSubmit}>
-                {/* Correo */}
                 <div>
                   <label
                     htmlFor="u_correo"
@@ -204,7 +314,6 @@ const Login = () => {
                   >
                     Correo electrónico
                   </label>
-
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
@@ -221,7 +330,6 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Contraseña */}
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <label
@@ -231,7 +339,6 @@ const Login = () => {
                       Contraseña
                     </label>
                   </div>
-
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
@@ -245,7 +352,6 @@ const Login = () => {
                       placeholder="Ingresa tu contraseña"
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-12 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                     />
-
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
@@ -260,7 +366,6 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Opciones */}
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 text-sm text-slate-600">
                     <input
@@ -271,13 +376,11 @@ const Login = () => {
                     />
                     Recordarme
                   </label>
-
                   <span className="text-xs text-slate-400">
                     Acceso seguro
                   </span>
                 </div>
 
-                {/* Botón */}
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -297,7 +400,6 @@ const Login = () => {
                   )}
                 </button>
 
-                {/* Registro */}
                 <div className="pt-2 text-center">
                   <p className="text-sm text-slate-600">
                     ¿No tienes cuenta?{' '}
@@ -308,6 +410,26 @@ const Login = () => {
                       Regístrate aquí
                     </Link>
                   </p>
+                </div>
+
+                {/* Tarjeta informativa para nuevos usuarios */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-blue-700">
+                        <strong>¿Necesitas ayuda?</strong> Después de registrarte, un administrador deberá 
+                        inscribirte en una quiniela para que puedas participar.
+                      </p>
+                      <button
+                        onClick={() => setShowAyudaModal(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1 inline-flex items-center gap-1"
+                      >
+                        <HelpCircle className="h-3 w-3" />
+                        Ver guía completa
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Redes Sociales en móvil */}
@@ -337,6 +459,15 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Botón de ayuda flotante */}
+      <button
+        onClick={() => setShowAyudaModal(true)}
+        className="fixed bottom-4 right-4 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition z-30"
+        title="Ayuda"
+      >
+        <HelpCircle className="h-5 w-5" />
+      </button>
     </div>
   );
 };
