@@ -1,4 +1,3 @@
-// src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +5,9 @@ import { Trophy, Users, Award, TrendingUp, CheckCircle, Star, Bell, Wifi, WifiOf
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useSocket } from '../hooks/useSocket';
+import { OnboardingTour } from '../components/onboarding/OnboardingTour';
+import { FloatingHelpWidget } from '../components/help/FloatingHelpWidget';
+import { InfoTooltip } from '../components/common/InfoTooltip';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -19,12 +21,22 @@ const HomePage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({});
+  const [showTour, setShowTour] = useState(false);
   
   // Socket.IO para tiempo real
   const { isConnected, lastMessage } = useSocket(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [estadisticasActualizadas, setEstadisticasActualizadas] = useState(false);
+
+  // Verificar si debe mostrar el tour
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('onboarding_completed');
+    if (!tourCompleted && user && !loading) {
+      // Pequeño delay para que cargue bien la página
+      setTimeout(() => setShowTour(true), 1000);
+    }
+  }, [user, loading]);
 
   // Efecto para escuchar mensajes en tiempo real
   useEffect(() => {
@@ -122,7 +134,6 @@ const HomePage = () => {
       });
       
     } catch (error) {
-      //console.error('Error cargando estadísticas:', error);
       toast.error('Error al cargar estadísticas');
     } finally {
       setLoading(false);
@@ -159,6 +170,12 @@ const HomePage = () => {
 
   return (
     <div className="space-y-8">
+      {/* Tour guiado para nuevos usuarios */}
+      {showTour && <OnboardingTour onComplete={() => setShowTour(false)} />}
+
+      {/* Widget de ayuda flotante */}
+      <FloatingHelpWidget />
+
       {/* Notificación en tiempo real */}
       {showNotification && (
         <div className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white rounded-lg shadow-lg p-4 max-w-md flex items-center gap-3 animate-slide-up">
@@ -183,17 +200,23 @@ const HomePage = () => {
         </div>
       )}
 
- 
-
       {/* Banner de bienvenida */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-8 text-white">
-        <h1 className="text-3xl font-bold mb-4">
-          ¡Bienvenido, {userInfo.NOMBRE_COMPLETO || user?.U_NOMBRE || 'Usuario'}! 👋
-        </h1>
-        <p className="text-lg">
-          Participa en nuestras quinielas, predice los resultados y gana puntos.
-          {isConnected && <span className="ml-2 text-sm opacity-75">📡 Tiempo real activo</span>}
-        </p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-4">
+              ¡Bienvenido, {userInfo.NOMBRE_COMPLETO || user?.U_NOMBRE || 'Usuario'}! 👋
+            </h1>
+            <p className="text-lg">
+              Participa en nuestras quinielas, predice los resultados y gana puntos.
+              {isConnected && <span className="ml-2 text-sm opacity-75">📡 Tiempo real activo</span>}
+            </p>
+          </div>
+          <InfoTooltip 
+            message="Las estadísticas se actualizan automáticamente cuando hay cambios en tus quinielas"
+            position="bottom"
+          />
+        </div>
       </div>
 
       {/* Estadísticas con navegación */}
@@ -201,53 +224,69 @@ const HomePage = () => {
         {/* Tarjeta de Mis Quinielas */}
         <div
           onClick={handleMisQuinielasClick}
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group relative"
+          id="mis-quinielas-link"
         >
           <Trophy className="h-8 w-8 text-indigo-600 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mis Quinielas</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.misQuinielas}</p>
           <p className="text-sm text-gray-400 mt-2">Activas donde participas</p>
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+            <InfoTooltip message="Ver todas tus quinielas activas" position="left" />
+          </div>
         </div>
 
         {/* Tarjeta de Mis Predicciones */}
         <div
           onClick={handleMisPrediccionesClick}
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-blue-50 group"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-blue-50 group relative"
         >
           <CheckCircle className="h-8 w-8 text-blue-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mis Predicciones</h3>
           <p className="text-3xl font-bold text-blue-600">{stats.misPredicciones}</p>
           <p className="text-sm text-gray-400 mt-2">Realizadas</p>
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+            <InfoTooltip message="Total de pronósticos que has realizado" position="left" />
+          </div>
         </div>
 
         {/* Tarjeta de Mis Aciertos */}
         <div
           onClick={handleMisAciertosClick}
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-green-50 group"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-green-50 group relative"
         >
           <Star className="h-8 w-8 text-green-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mis Aciertos</h3>
           <p className="text-3xl font-bold text-green-600">{stats.totalAciertos}</p>
           <p className="text-sm text-gray-400 mt-2">En todas las quinielas</p>
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+            <InfoTooltip message="Veces que acertaste el resultado exacto" position="left" />
+          </div>
         </div>
 
         {/* Tarjeta de Mi Puntuación */}
         <div
           onClick={handleMiPuntuacionClick}
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-yellow-50 group"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-yellow-50 group relative"
         >
           <Award className="h-8 w-8 text-yellow-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mi Puntuación</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.miPuntuacion} pts</p>
           <p className="text-sm text-gray-400 mt-2">Ver mis quinielas</p>
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+            <InfoTooltip message="Puntos totales acumulados en todas tus quinielas" position="left" />
+          </div>
         </div>
 
         {/* Tarjeta de Participantes */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 relative group">
           <Users className="h-8 w-8 text-indigo-600 mb-2" />
           <h3 className="text-lg font-semibold text-gray-700">Participantes</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.participantes}</p>
           <p className="text-sm text-gray-400 mt-2">En tus quinielas</p>
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+            <InfoTooltip message="Usuarios que participan en tus quinielas" position="left" />
+          </div>
         </div>
       </div>
 
