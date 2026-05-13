@@ -330,7 +330,6 @@ function AppRoutes() {
       </Routes>
 
       <Toaster position="top-right" />
-      <PushNotificaciones />
       <SocketStatus />
     </>
   );
