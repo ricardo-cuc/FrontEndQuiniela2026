@@ -187,21 +187,7 @@ const MisQuinielasPage = () => {
         </div>
       )}
 
-      {/* Indicador de conexión Socket.IO */}
-      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow-md">
-        {isConnected ? (
-          <>
-            <Wifi className="h-3 w-3 text-green-500" />
-            <span className="text-xs text-gray-500">Tiempo real</span>
-          </>
-        ) : (
-          <>
-            <WifiOff className="h-3 w-3 text-red-500" />
-            <span className="text-xs text-gray-500">Sin conexión</span>
-          </>
-        )}
-      </div>
-
+      
       {/* Saludo personalizado */}
       {userInfo.NOMBRE_COMPLETO && (
         <div className="mb-6">
