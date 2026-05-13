@@ -1,103 +1,91 @@
 // components/participantes/ModalParticipantes.jsx
 import React, { useState, useEffect } from 'react';
-import { X, Users, ChevronLeft, ChevronRight, Trophy, Star, Smile, ThumbsUp, Heart, Laugh, PartyPopper } from 'lucide-react';
+import { X, Users, Smile, Send } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-// Emojis disponibles para reaccionar
 const emojisDisponibles = [
-  { id: '👍', emoji: '👍', nombre: 'Like', color: 'hover:bg-blue-100' },
-  { id: '❤️', emoji: '❤️', nombre: 'Corazón', color: 'hover:bg-red-100' },
-  { id: '😂', emoji: '😂', nombre: 'Risa', color: 'hover:bg-yellow-100' },
-  { id: '🎉', emoji: '🎉', nombre: 'Fiesta', color: 'hover:bg-purple-100' },
-  { id: '⚽', emoji: '⚽', nombre: 'Gol', color: 'hover:bg-green-100' },
-  { id: '🏆', emoji: '🏆', nombre: 'Trofeo', color: 'hover:bg-amber-100' },
-  { id: '🤝', emoji: '🤝', nombre: 'Saludo', color: 'hover:bg-indigo-100' },
-  { id: '💪', emoji: '💪', nombre: 'Fuerza', color: 'hover:bg-orange-100' },
+  { id: '👍', emoji: '👍', nombre: 'Like' },
+  { id: '❤️', emoji: '❤️', nombre: 'Corazón' },
+  { id: '😂', emoji: '😂', nombre: 'Risa' },
+  { id: '🎉', emoji: '🎉', nombre: 'Fiesta' },
+  { id: '⚽', emoji: '⚽', nombre: 'Gol' },
+  { id: '🏆', emoji: '🏆', nombre: 'Trofeo' },
+  { id: '🤝', emoji: '🤝', nombre: 'Saludo' },
+  { id: '💪', emoji: '💪', nombre: 'Fuerza' },
 ];
 
 export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre }) => {
   const [participantes, setParticipantes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [emisor, setEmisor] = useState(null);
-  const [enviando, setEnviando] = useState(null);
   const [mensajes, setMensajes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
   const [showEmojis, setShowEmojis] = useState(null);
 
-  // Cargar participantes
+  // Cargar datos al abrir el modal
   useEffect(() => {
     if (isOpen && quinielaId) {
-      cargarParticipantes();
-      cargarMensajes();
-      // Obtener información del usuario actual
-      const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
-      setEmisor(userData);
+      cargarDatos();
     }
   }, [isOpen, quinielaId]);
 
-  const cargarParticipantes = async () => {
+  const cargarDatos = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/quinielas/${quinielaId}/participantes`);
-      setParticipantes(response.data.data || []);
+      
+      // Cargar participantes
+      const participantesRes = await api.get(`/api/quinielas/${quinielaId}/participantes`);
+      setParticipantes(participantesRes.data.data || []);
+      
+      // Cargar mensajes
+      const mensajesRes = await api.get(`/api/quinielas/${quinielaId}/mensajes`);
+      setMensajes(mensajesRes.data.data || []);
+      
     } catch (error) {
-      console.error('Error cargando participantes:', error);
-      toast.error('Error al cargar participantes');
+      console.error('Error cargando datos:', error);
+      toast.error('Error al cargar los datos');
     } finally {
       setLoading(false);
     }
   };
 
-  const cargarMensajes = async () => {
-    try {
-      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes`);
-      setMensajes(response.data.data || []);
-    } catch (error) {
-      console.error('Error cargando mensajes:', error);
-    }
-  };
-
   const enviarMensaje = async () => {
     if (!nuevoMensaje.trim()) return;
-
+    
+    setEnviando(true);
     try {
       const response = await api.post(`/api/quinielas/${quinielaId}/mensajes`, {
         mensaje: nuevoMensaje,
         tipo: 'texto'
       });
       
+      // Agregar mensaje a la lista
       setMensajes(prev => [response.data.data, ...prev]);
       setNuevoMensaje('');
-      toast.success('💬 Mensaje enviado');
+      toast.success('Mensaje enviado');
+      
     } catch (error) {
       console.error('Error enviando mensaje:', error);
-      toast.error('Error al enviar mensaje');
+      toast.error(error.response?.data?.message || 'Error al enviar mensaje');
+    } finally {
+      setEnviando(false);
     }
   };
 
-  const enviarReaccion = async (participanteId, emoji) => {
+  const enviarReaccion = async (receptorId, emoji) => {
     try {
-      setEnviando(participanteId);
       await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
-        usuario_id: participanteId,
+        usuario_id: receptorId,
         emoji: emoji.emoji
       });
       
-      toast.success(`Le enviaste ${emoji.emoji} a ${participantes.find(p => p.U_CODIGO === participanteId)?.U_NOMBRE}`);
+      toast.success(`Reacción ${emoji.emoji} enviada`);
+      setShowEmojis(null);
       
-      // Actualizar contador localmente
-      setParticipantes(prev => prev.map(p => 
-        p.U_CODIGO === participanteId 
-          ? { ...p, reacciones: [...(p.reacciones || []), { emoji: emoji.emoji, de: emisor?.U_CODIGO }] }
-          : p
-      ));
     } catch (error) {
       console.error('Error enviando reacción:', error);
-      toast.error('Error al enviar reacción');
-    } finally {
-      setEnviando(null);
-      setShowEmojis(null);
+      toast.error(error.response?.data?.message || 'Error al enviar reacción');
     }
   };
 
@@ -108,51 +96,44 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-          <div className="flex items-center gap-3">
-            <Users className="h-6 w-6" />
-            <div>
-              <h2 className="text-xl font-bold">Participantes</h2>
-              <p className="text-sm text-indigo-200">{quinielaNombre}</p>
-            </div>
+          <div>
+            <h2 className="text-xl font-bold">Participantes</h2>
+            <p className="text-sm text-indigo-200">{quinielaNombre}</p>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white">
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Contenido principal - Dos columnas */}
+        {/* Contenido */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Columna izquierda - Lista de participantes */}
+          {/* Lista de participantes */}
           <div className="w-1/2 border-r border-gray-200 flex flex-col">
             <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <h3 className="font-semibold text-gray-700">
                 Participantes ({participantes.length})
               </h3>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {loading ? (
-                <div className="text-center py-8 text-gray-500">Cargando participantes...</div>
+                <div className="text-center py-8 text-gray-500">Cargando...</div>
               ) : participantes.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No hay participantes</div>
               ) : (
-                participantes.map((participante) => (
-                  <div key={participante.U_CODIGO} className="bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md transition group relative">
+                participantes.map((p) => (
+                  <div key={p.U_CODIGO} className="bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md transition">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                          {participante.U_NOMBRE?.charAt(0)}{participante.U_APELLIDO?.charAt(0)}
+                          {p.U_NOMBRE?.charAt(0)}{p.U_APELLIDO?.charAt(0)}
                         </div>
                         <div>
                           <p className="font-semibold text-gray-800">
-                            {participante.U_NOMBRE} {participante.U_APELLIDO}
+                            {p.U_NOMBRE} {p.U_APELLIDO}
                           </p>
-                          <p className="text-xs text-gray-400">{participante.U_CORREO}</p>
-                          {participante.puntuacion !== undefined && (
-                            <p className="text-xs text-yellow-600 flex items-center gap-1 mt-1">
-                              <Star className="h-3 w-3" />
-                              {participante.puntuacion} pts
-                            </p>
+                          <p className="text-xs text-gray-400">{p.U_CORREO}</p>
+                          {p.puntuacion_total > 0 && (
+                            <p className="text-xs text-yellow-600">⭐ {p.puntuacion_total} pts</p>
                           )}
                         </div>
                       </div>
@@ -160,22 +141,20 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                       {/* Botón de emojis */}
                       <div className="relative">
                         <button
-                          onClick={() => setShowEmojis(showEmojis === participante.U_CODIGO ? null : participante.U_CODIGO)}
+                          onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
                           className="p-2 rounded-full hover:bg-gray-100 transition"
-                          disabled={enviando === participante.U_CODIGO}
                         >
-                          <Smile className={`h-5 w-5 ${enviando === participante.U_CODIGO ? 'animate-pulse text-gray-400' : 'text-gray-400 hover:text-yellow-500'}`} />
+                          <Smile className="h-5 w-5 text-gray-400 hover:text-yellow-500" />
                         </button>
                         
-                        {/* Menú de emojis */}
-                        {showEmojis === participante.U_CODIGO && (
+                        {showEmojis === p.U_CODIGO && (
                           <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-2 z-10 w-64">
                             <div className="grid grid-cols-4 gap-1">
                               {emojisDisponibles.map((emoji) => (
                                 <button
                                   key={emoji.id}
-                                  onClick={() => enviarReaccion(participante.U_CODIGO, emoji)}
-                                  className={`p-2 rounded-lg text-2xl transition hover:scale-110 ${emoji.color}`}
+                                  onClick={() => enviarReaccion(p.U_CODIGO, emoji)}
+                                  className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition hover:scale-110"
                                   title={emoji.nombre}
                                 >
                                   {emoji.emoji}
@@ -186,30 +165,16 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                         )}
                       </div>
                     </div>
-                    
-                    {/* Reacciones recibidas */}
-                    {participante.reacciones?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {participante.reacciones.map((reaccion, idx) => (
-                          <span key={idx} className="text-sm bg-gray-100 rounded-full px-2 py-0.5">
-                            {reaccion.emoji}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* Columna derecha - Chat en vivo */}
+          {/* Chat */}
           <div className="w-1/2 flex flex-col">
             <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                <span className="text-lg">💬</span>
-                Chat en vivo
-              </h3>
+              <h3 className="font-semibold text-gray-700">💬 Chat en vivo</h3>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse">
@@ -219,21 +184,14 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 </div>
               ) : (
                 mensajes.map((msg) => (
-                  <div
-                    key={msg.ID}
-                    className={`flex ${msg.U_CODIGO === emisor?.U_CODIGO ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[80%] ${msg.U_CODIGO === emisor?.U_CODIGO ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-700'} rounded-2xl px-4 py-2`}>
-                      {msg.U_CODIGO !== emisor?.U_CODIGO && (
-                        <p className="text-xs font-semibold mb-1 opacity-70">
-                          {msg.U_NOMBRE} {msg.U_APELLIDO}
-                        </p>
-                      )}
-                      <p className="text-sm">{msg.MENSAJE}</p>
-                      <p className="text-xs mt-1 opacity-50">
-                        {new Date(msg.FECHA).toLocaleTimeString()}
-                      </p>
-                    </div>
+                  <div key={msg.ID_MENSAJE} className="bg-gray-100 rounded-xl px-4 py-2">
+                    <p className="text-xs font-semibold text-indigo-600">
+                      {msg.U_NOMBRE} {msg.U_APELLIDO}
+                    </p>
+                    <p className="text-sm text-gray-700">{msg.MENSAJE}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(msg.FECHA_CREACION).toLocaleTimeString()}
+                    </p>
                   </div>
                 ))
               )}
@@ -252,14 +210,14 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 />
                 <button
                   onClick={enviarMensaje}
-                  disabled={!nuevoMensaje.trim()}
+                  disabled={!nuevoMensaje.trim() || enviando}
                   className="bg-indigo-600 text-white px-4 py-2 rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
                 >
-                  Enviar
+                  <Send className="h-4 w-4" />
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-2 text-center">
-                💡 ¡Sé respetuoso! Los mensajes son visibles para todos los participantes
+                💡 Sé respetuoso. Los mensajes son visibles para todos.
               </p>
             </div>
           </div>
