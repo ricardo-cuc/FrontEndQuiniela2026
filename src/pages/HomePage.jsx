@@ -28,6 +28,8 @@ const HomePage = () => {
   // Estados para el modal de participantes
   const [showModalParticipantes, setShowModalParticipantes] = useState(false);
   const [quinielaSeleccionada, setQuinielaSeleccionada] = useState(null);
+  const [showSelectorQuinielas, setShowSelectorQuinielas] = useState(false);
+  const [quinielasDisponibles, setQuinielasDisponibles] = useState([]);
   
   // Socket.IO para tiempo real
   const { isConnected, lastMessage } = useSocket(null);
@@ -49,7 +51,7 @@ const HomePage = () => {
       let message = '';
       switch (lastMessage.type) {
         case 'RESULTADO_ACTUALIZADO':
-          message = `⚽ Resultado actualizado: ${lastMessage.partido?.EQUIPO_1_NOMBRE} vs ${lastMessage.partido?.EQUIPO_2_NOMBRE}`;
+          message = `⚽ Resultado actualizado: ${lastMessage.partido?.EQUIPO_1_NOMBRE || 'Local'} vs ${lastMessage.partido?.EQUIPO_2_NOMBRE || 'Visitante'}`;
           cargarEstadisticas();
           setEstadisticasActualizadas(true);
           setTimeout(() => setEstadisticasActualizadas(false), 3000);
@@ -65,7 +67,7 @@ const HomePage = () => {
           cargarEstadisticas();
           break;
         default:
-          message = 'Actualización en tus quinielas';
+          message = '🔄 Actualización en tus quinielas';
           cargarEstadisticas();
       }
       
@@ -106,7 +108,6 @@ const HomePage = () => {
         misQuinielas = [];
       }
       
-      // Guardar lista de quinielas para usar en participantes
       setMisQuinielasList(misQuinielas);
       
       const totalMisQuinielas = misQuinielas.length;
@@ -129,7 +130,7 @@ const HomePage = () => {
           const participantesRes = await api.get(`/api/quinielas/${quiniela.ID_QUINIELA}/participantes/count`);
           totalParticipantes += participantesRes.data.data?.total_participantes || 0;
         } catch (e) {
-          // Error silencioso
+          console.error('Error al contar participantes:', e);
         }
       }
       
@@ -142,6 +143,7 @@ const HomePage = () => {
       });
       
     } catch (error) {
+      console.error('Error cargando estadísticas:', error);
       toast.error('Error al cargar estadísticas');
     } finally {
       setLoading(false);
@@ -159,25 +161,12 @@ const HomePage = () => {
       return;
     }
     
-    // Si solo hay una quiniela, abrir directamente
     if (misQuinielasList.length === 1) {
       setQuinielaSeleccionada(misQuinielasList[0]);
       setShowModalParticipantes(true);
     } else {
-      // Mostrar selector de quinielas con SweetAlert o prompt
-      const opciones = misQuinielasList.map((q, idx) => `${idx + 1}. ${q.NOMBRE}`).join('\n');
-      const seleccion = prompt(
-        `Tienes varias quinielas. ¿En cuál quieres ver los participantes?\n\n${opciones}\n\nIngresa el número (1-${misQuinielasList.length}):`,
-        '1'
-      );
-      
-      const index = parseInt(seleccion) - 1;
-      if (index >= 0 && index < misQuinielasList.length) {
-        setQuinielaSeleccionada(misQuinielasList[index]);
-        setShowModalParticipantes(true);
-      } else if (seleccion !== null) {
-        toast.error('Selección inválida');
-      }
+      setQuinielasDisponibles(misQuinielasList);
+      setShowSelectorQuinielas(true);
     }
   };
 
@@ -212,6 +201,51 @@ const HomePage = () => {
 
       {/* Widget de ayuda flotante */}
       <FloatingHelpWidget />
+
+      {/* Selector de quinielas (cuando hay múltiples) */}
+      {showSelectorQuinielas && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
+              <h2 className="text-xl font-bold">Seleccionar quiniela</h2>
+              <p className="text-sm text-indigo-200">Elige en qué quiniela quieres interactuar</p>
+            </div>
+            <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+              {quinielasDisponibles.map((q) => (
+                <button
+                  key={q.ID_QUINIELA}
+                  onClick={() => {
+                    setQuinielaSeleccionada(q);
+                    setShowSelectorQuinielas(false);
+                    setShowModalParticipantes(true);
+                  }}
+                  className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition group"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600">
+                        {q.NOMBRE}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-1">
+                        🏆 {q.C_CAMPEONATO} | ⭐ {q.PUNTOS_TOTALES || 0} pts
+                      </p>
+                    </div>
+                    <span className="text-indigo-400 group-hover:translate-x-1 transition">→</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowSelectorQuinielas(false)}
+                className="w-full text-gray-500 hover:text-gray-700 py-2"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Participantes */}
       {showModalParticipantes && (
@@ -322,13 +356,13 @@ const HomePage = () => {
           <Award className="h-8 w-8 text-yellow-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mi Puntuación</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.miPuntuacion} pts</p>
-          <p className="text-sm text-gray-400 mt-2">Ver mis quinielas</p>
+          <p className="text-sm text-gray-400 mt-2">Acumulados</p>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
             <InfoTooltip message="Puntos totales acumulados en todas tus quinielas" position="left" />
           </div>
         </div>
 
-        {/* Tarjeta de Participantes - AHORA CON CLICK */}
+        {/* Tarjeta de Participantes */}
         <div
           onClick={handleParticipantesClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group relative"
