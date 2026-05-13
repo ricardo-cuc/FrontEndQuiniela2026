@@ -27,12 +27,12 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [showEmojis, setShowEmojis] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef(null);
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef(null); // ✅ Para hacer scroll al final
+  const messagesContainerRef = useRef(null);
 
   // Conectar al socket cuando se abre el modal
   useEffect(() => {
     if (isOpen && quinielaId) {
-      // Crear conexión socket si no existe
       if (!socketRef.current) {
         socketRef.current = io(API_URL, {
           transports: ['websocket', 'polling'],
@@ -53,7 +53,10 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         // Escuchar nuevos mensajes
         socketRef.current.on('nuevo-mensaje-chat', (nuevoMensaje) => {
           console.log('📢 Nuevo mensaje recibido:', nuevoMensaje);
-          setMensajes(prev => [nuevoMensaje, ...prev]);
+          // ✅ Agregar al FINAL del array (para orden ascendente)
+          setMensajes(prev => [...prev, nuevoMensaje]);
+          // ✅ Hacer scroll al final después de agregar el mensaje
+          setTimeout(scrollToBottom, 100);
         });
 
         // Escuchar nuevas reacciones
@@ -66,7 +69,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           ));
         });
       } else {
-        // Si ya existe, unirse a la sala
         socketRef.current.emit('join-quiniela', quinielaId);
       }
 
@@ -80,12 +82,19 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   }, [isOpen, quinielaId]);
 
-  // Auto-scroll al nuevo mensaje
-  useEffect(() => {
+  // ✅ Función para hacer scroll al final del chat
+  const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [mensajes]);
+  };
+
+  // ✅ Hacer scroll al final cuando se cargan los mensajes iniciales
+  useEffect(() => {
+    if (!loading && mensajes.length > 0) {
+      scrollToBottom();
+    }
+  }, [loading, mensajes.length]);
 
   const cargarDatos = async () => {
     try {
@@ -97,7 +106,13 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       ]);
       
       setParticipantes(participantesRes.data.data || []);
-      setMensajes(mensajesRes.data.data || []);
+      // ✅ Los mensajes vienen ordenados DESC por fecha (más nuevo primero)
+      // Los invertimos para mostrar el más antiguo arriba y el más nuevo abajo
+      const mensajesOrdenados = (mensajesRes.data.data || []).reverse();
+      setMensajes(mensajesOrdenados);
+      
+      // ✅ Scroll al final después de cargar
+      setTimeout(scrollToBottom, 200);
       
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -117,7 +132,11 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         tipo: 'texto'
       });
       
+      // ✅ Agregar mensaje al final (ya se recibirá por socket, pero lo agregamos localmente para inmediatez)
+      const msg = response.data.data;
+      setMensajes(prev => [...prev, msg]);
       setNuevoMensaje('');
+      scrollToBottom();
       toast.success('Mensaje enviado');
       
     } catch (error) {
@@ -225,7 +244,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                         )}
                       </div>
                     </div>
-                    {/* Mostrar reacciones recibidas */}
                     {p.reacciones?.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {p.reacciones.map((r, idx) => (
@@ -247,8 +265,15 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               <h3 className="font-semibold text-gray-700">💬 Chat en vivo</h3>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse">
-              {mensajes.length === 0 ? (
+            {/* ✅ Contenedor de mensajes con scroll normal (orden ascendente) */}
+            <div 
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-3"
+              style={{ display: 'flex', flexDirection: 'column' }}
+            >
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">Cargando mensajes...</div>
+              ) : mensajes.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-sm">
                   No hay mensajes aún. ¡Sé el primero en saludar!
                 </div>
@@ -265,6 +290,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                   </div>
                 ))
               )}
+              {/* ✅ Elemento fantasma para hacer scroll al final */}
               <div ref={messagesEndRef} />
             </div>
 
