@@ -1,6 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { authService } from '../services/authService';
+import { scheduleTokenRefresh, clearTokenSchedule } from '../services/tokenScheduler';
 import api from '../services/api';
 
 const AuthContext = createContext();
@@ -27,10 +28,11 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ Función para limpiar sesión expirada
   const clearExpiredSession = () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token && isTokenExpired(token)) {
       console.log('Sesión expirada, limpiando...');
       authService.logout();
+      clearTokenSchedule();
       setUser(null);
       return true;
     }
@@ -47,8 +49,11 @@ export const AuthProvider = ({ children }) => {
         const currentUser = authService.getCurrentUser();
         if (currentUser) {
           setUser(currentUser);
+          // ✅ Programar refresh automático si hay usuario
+          scheduleTokenRefresh();
         } else {
           setUser(null);
+          clearTokenSchedule();
         }
       }
       setLoading(false);
@@ -59,10 +64,11 @@ export const AuthProvider = ({ children }) => {
   // ✅ Verificar expiración periódicamente (cada minuto)
   useEffect(() => {
     const checkSessionExpiration = () => {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (token && isTokenExpired(token)) {
         console.log('Sesión expirada detectada durante verificación periódica');
         authService.logout();
+        clearTokenSchedule();
         setUser(null);
         // Disparar evento personalizado para que otros componentes reaccionen
         window.dispatchEvent(new CustomEvent('sessionExpired'));
@@ -95,11 +101,9 @@ export const AuthProvider = ({ children }) => {
         };
         setUser(userData);
         
-        // Guardar el token con timestamp de expiración si no viene en el JWT
-        const token = localStorage.getItem('token');
-        if (token && !isTokenExpired(token)) {
-          // Token válido, todo bien
-        }
+        // ✅ El scheduleTokenRefresh ya se llama dentro de authService.login()
+        // pero lo llamamos nuevamente por si acaso
+        scheduleTokenRefresh();
       }
       return data;
     } catch (error) {
@@ -116,6 +120,7 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ Logout con limpieza completa
   const logout = () => {
+    clearTokenSchedule(); // Limpiar scheduler programado
     authService.logout();
     setUser(null);
   };
@@ -124,7 +129,7 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = useMemo(() => {
     if (!user) return false;
     // Verificar token nuevamente
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     return !!token && !isTokenExpired(token);
   }, [user]);
 
