@@ -31,11 +31,37 @@ const HomePage = () => {
   const [showSelectorQuinielas, setShowSelectorQuinielas] = useState(false);
   const [quinielasDisponibles, setQuinielasDisponibles] = useState([]);
   
+  // Estados para mensajes no leídos
+  const [mensajesNoLeidos, setMensajesNoLeidos] = useState({});
+  const [totalMensajesNoLeidos, setTotalMensajesNoLeidos] = useState(0);
+  
   // Socket.IO para tiempo real
   const { isConnected, lastMessage } = useSocket(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [estadisticasActualizadas, setEstadisticasActualizadas] = useState(false);
+
+  // Cargar mensajes no leídos desde localStorage al iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem('mensajes_no_leidos');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setMensajesNoLeidos(parsed);
+        const total = Object.values(parsed).reduce((a, b) => a + b, 0);
+        setTotalMensajesNoLeidos(total);
+      } catch (e) {
+        console.error('Error parsing mensajes_no_leidos:', e);
+      }
+    }
+  }, []);
+
+  // Guardar mensajes no leídos en localStorage cuando cambian
+  useEffect(() => {
+    localStorage.setItem('mensajes_no_leidos', JSON.stringify(mensajesNoLeidos));
+    const total = Object.values(mensajesNoLeidos).reduce((a, b) => a + b, 0);
+    setTotalMensajesNoLeidos(total);
+  }, [mensajesNoLeidos]);
 
   // Verificar si debe mostrar el tour
   useEffect(() => {
@@ -66,6 +92,17 @@ const HomePage = () => {
           message = `📝 Nueva predicción realizada`;
           cargarEstadisticas();
           break;
+        case 'NUEVO_MENSAJE_CHAT':
+          // Incrementar contador de mensajes no leídos para esta quiniela
+          const quinielaId = lastMessage.quinielaId;
+          if (quinielaId) {
+            setMensajesNoLeidos(prev => ({
+              ...prev,
+              [quinielaId]: (prev[quinielaId] || 0) + 1
+            }));
+          }
+          message = `💬 Nuevo mensaje en ${lastMessage.quinielaNombre || 'una quiniela'}`;
+          break;
         default:
           message = '🔄 Actualización en tus quinielas';
           cargarEstadisticas();
@@ -79,6 +116,14 @@ const HomePage = () => {
       }, 5000);
     }
   }, [lastMessage]);
+
+  // Marcar mensajes como leídos para una quiniela
+  const marcarComoLeidos = (quinielaId) => {
+    setMensajesNoLeidos(prev => ({
+      ...prev,
+      [quinielaId]: 0
+    }));
+  };
 
   const cargarEstadisticas = async () => {
     try {
@@ -162,7 +207,9 @@ const HomePage = () => {
     }
     
     if (misQuinielasList.length === 1) {
-      setQuinielaSeleccionada(misQuinielasList[0]);
+      const quiniela = misQuinielasList[0];
+      setQuinielaSeleccionada(quiniela);
+      marcarComoLeidos(quiniela.ID_QUINIELA);
       setShowModalParticipantes(true);
     } else {
       setQuinielasDisponibles(misQuinielasList);
@@ -207,33 +254,53 @@ const HomePage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
-              <h2 className="text-xl font-bold">Seleccionar quiniela</h2>
-              <p className="text-sm text-indigo-200">Elige en qué quiniela quieres interactuar</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-bold">Seleccionar quiniela</h2>
+                  <p className="text-sm text-indigo-200">Elige en qué quiniela quieres interactuar</p>
+                </div>
+                {totalMensajesNoLeidos > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                    {totalMensajesNoLeidos} nuevo(s)
+                  </span>
+                )}
+              </div>
             </div>
             <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-              {quinielasDisponibles.map((q) => (
-                <button
-                  key={q.ID_QUINIELA}
-                  onClick={() => {
-                    setQuinielaSeleccionada(q);
-                    setShowSelectorQuinielas(false);
-                    setShowModalParticipantes(true);
-                  }}
-                  className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition group"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600">
-                        {q.NOMBRE}
-                      </h3>
-                      <p className="text-xs text-gray-400 mt-1">
-                        🏆 {q.C_CAMPEONATO} | ⭐ {q.PUNTOS_TOTALES || 0} pts
-                      </p>
+              {quinielasDisponibles.map((q) => {
+                const noLeidos = mensajesNoLeidos[q.ID_QUINIELA] || 0;
+                return (
+                  <button
+                    key={q.ID_QUINIELA}
+                    onClick={() => {
+                      setQuinielaSeleccionada(q);
+                      marcarComoLeidos(q.ID_QUINIELA);
+                      setShowSelectorQuinielas(false);
+                      setShowModalParticipantes(true);
+                    }}
+                    className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition group"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600">
+                          {q.NOMBRE}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-1">
+                          🏆 {q.C_CAMPEONATO} | ⭐ {q.PUNTOS_TOTALES || 0} pts
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {noLeidos > 0 && (
+                          <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[20px] text-center animate-pulse">
+                            {noLeidos > 9 ? '9+' : noLeidos}
+                          </span>
+                        )}
+                        <span className="text-indigo-400 group-hover:translate-x-1 transition">→</span>
+                      </div>
                     </div>
-                    <span className="text-indigo-400 group-hover:translate-x-1 transition">→</span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
             <div className="p-4 border-t border-gray-200">
               <button
@@ -362,15 +429,27 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Tarjeta de Participantes */}
+        {/* Tarjeta de Participantes - CON BADGE DE MENSAJES NO LEÍDOS */}
         <div
           onClick={handleParticipantesClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group relative"
         >
-          <Users className="h-8 w-8 text-indigo-600 mb-2 group-hover:scale-110 transition" />
+          <div className="relative inline-block">
+            <Users className="h-8 w-8 text-indigo-600 mb-2 group-hover:scale-110 transition" />
+            {totalMensajesNoLeidos > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                {totalMensajesNoLeidos > 9 ? '9+' : totalMensajesNoLeidos}
+              </span>
+            )}
+          </div>
           <h3 className="text-lg font-semibold text-gray-700">Participantes</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.participantes}</p>
           <p className="text-sm text-gray-400 mt-2">¡Interactúa con ellos!</p>
+          {totalMensajesNoLeidos > 0 && (
+            <p className="text-xs text-red-500 mt-1 animate-pulse font-medium">
+              📨 {totalMensajesNoLeidos} mensaje(s) nuevo(s)
+            </p>
+          )}
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
             <InfoTooltip message="Ver participantes y enviar reacciones" position="left" />
           </div>
