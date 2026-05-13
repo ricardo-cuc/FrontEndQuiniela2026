@@ -88,7 +88,7 @@ const ResultadosPage = () => {
     <div>
       <Link to="/admin/resultados" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Volver a Quinielas
+        Volver a Quiniel
       </Link>
 
       <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-lg shadow-lg p-6 text-white mb-8">
