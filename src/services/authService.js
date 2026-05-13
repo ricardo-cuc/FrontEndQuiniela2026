@@ -71,7 +71,12 @@ export const authService = {
 
   refreshToken: async () => {
     const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
-    if (!refreshToken) throw new Error('No refresh token');
+    
+    // ✅ Si no hay refresh token, no intentar refrescar
+    if (!refreshToken) {
+      console.log('No hay refresh token disponible');
+      throw new Error('No refresh token - debe iniciar sesión');
+    }
     
     try {
       const response = await api.post('/api/auth/refresh', { refreshToken });
@@ -90,8 +95,7 @@ export const authService = {
       throw new Error('No se recibió nuevo token');
     } catch (error) {
       console.error('Error refreshing token:', error);
-      // Si falla el refresh, hacer logout
-      this.logout();
+      // ✅ No hacer logout automático aquí, dejar que el interceptor maneje
       throw error;
     }
   },
