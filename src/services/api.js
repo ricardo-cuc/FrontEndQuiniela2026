@@ -60,13 +60,19 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // ✅ NUEVO: Verificar si es un endpoint de autenticación
+    const isAuthEndpoint = original.url?.includes('/login') || 
+                          original.url?.includes('/register') ||
+                          original.url?.includes('/auth/refresh');
+
     // =====================================
-    // TOKEN EXPIRED
+    // TOKEN EXPIRED - SOLO para endpoints NO auth
     // =====================================
 
     if (
       error.response.status === 401 &&
-      !original._retry
+      !original._retry &&
+      !isAuthEndpoint  // ✅ Excluir endpoints de autenticación
     ) {
 
       original._retry = true;
