@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Trophy, Users, Award, TrendingUp, CheckCircle, Star, Bell, Wifi, WifiOff, X } from 'lucide-react';
+import { Trophy, Users, Award, TrendingUp, CheckCircle, Star, Bell, X } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useSocket } from '../hooks/useSocket';
 import { OnboardingTour } from '../components/onboarding/OnboardingTour';
 import { FloatingHelpWidget } from '../components/help/FloatingHelpWidget';
 import { InfoTooltip } from '../components/common/InfoTooltip';
+import { ModalParticipantes } from '../components/participantes/ModalParticipantes';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -22,6 +23,11 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({});
   const [showTour, setShowTour] = useState(false);
+  const [misQuinielasList, setMisQuinielasList] = useState([]);
+  
+  // Estados para el modal de participantes
+  const [showModalParticipantes, setShowModalParticipantes] = useState(false);
+  const [quinielaSeleccionada, setQuinielaSeleccionada] = useState(null);
   
   // Socket.IO para tiempo real
   const { isConnected, lastMessage } = useSocket(null);
@@ -33,7 +39,6 @@ const HomePage = () => {
   useEffect(() => {
     const tourCompleted = localStorage.getItem('onboarding_completed');
     if (!tourCompleted && user && !loading) {
-      // Pequeño delay para que cargue bien la página
       setTimeout(() => setShowTour(true), 1000);
     }
   }, [user, loading]);
@@ -101,6 +106,9 @@ const HomePage = () => {
         misQuinielas = [];
       }
       
+      // Guardar lista de quinielas para usar en participantes
+      setMisQuinielasList(misQuinielas);
+      
       const totalMisQuinielas = misQuinielas.length;
       
       let totalPredicciones = 0;
@@ -144,6 +152,35 @@ const HomePage = () => {
     cargarEstadisticas();
   }, []);
 
+  // Función para manejar clic en Participantes
+  const handleParticipantesClick = () => {
+    if (misQuinielasList.length === 0) {
+      toast.error('No estás inscrito en ninguna quiniela');
+      return;
+    }
+    
+    // Si solo hay una quiniela, abrir directamente
+    if (misQuinielasList.length === 1) {
+      setQuinielaSeleccionada(misQuinielasList[0]);
+      setShowModalParticipantes(true);
+    } else {
+      // Mostrar selector de quinielas con SweetAlert o prompt
+      const opciones = misQuinielasList.map((q, idx) => `${idx + 1}. ${q.NOMBRE}`).join('\n');
+      const seleccion = prompt(
+        `Tienes varias quinielas. ¿En cuál quieres ver los participantes?\n\n${opciones}\n\nIngresa el número (1-${misQuinielasList.length}):`,
+        '1'
+      );
+      
+      const index = parseInt(seleccion) - 1;
+      if (index >= 0 && index < misQuinielasList.length) {
+        setQuinielaSeleccionada(misQuinielasList[index]);
+        setShowModalParticipantes(true);
+      } else if (seleccion !== null) {
+        toast.error('Selección inválida');
+      }
+    }
+  };
+
   const handleMisQuinielasClick = () => {
     navigate('/mis-quinielas');
   };
@@ -175,6 +212,19 @@ const HomePage = () => {
 
       {/* Widget de ayuda flotante */}
       <FloatingHelpWidget />
+
+      {/* Modal de Participantes */}
+      {showModalParticipantes && (
+        <ModalParticipantes
+          isOpen={showModalParticipantes}
+          onClose={() => {
+            setShowModalParticipantes(false);
+            setQuinielaSeleccionada(null);
+          }}
+          quinielaId={quinielaSeleccionada?.ID_QUINIELA}
+          quinielaNombre={quinielaSeleccionada?.NOMBRE}
+        />
+      )}
 
       {/* Notificación en tiempo real */}
       {showNotification && (
@@ -278,14 +328,17 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Tarjeta de Participantes */}
-        <div className="bg-white rounded-lg shadow p-6 relative group">
-          <Users className="h-8 w-8 text-indigo-600 mb-2" />
+        {/* Tarjeta de Participantes - AHORA CON CLICK */}
+        <div
+          onClick={handleParticipantesClick}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group relative"
+        >
+          <Users className="h-8 w-8 text-indigo-600 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Participantes</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.participantes}</p>
-          <p className="text-sm text-gray-400 mt-2">En tus quinielas</p>
+          <p className="text-sm text-gray-400 mt-2">¡Interactúa con ellos!</p>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-            <InfoTooltip message="Usuarios que participan en tus quinielas" position="left" />
+            <InfoTooltip message="Ver participantes y enviar reacciones" position="left" />
           </div>
         </div>
       </div>
