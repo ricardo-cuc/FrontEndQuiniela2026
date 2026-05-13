@@ -97,12 +97,23 @@ const Login = () => {
       toast.success('¡Bienvenido de vuelta!');
       navigate('/');
     } catch (error) {
-      let mensaje = error.response?.data?.mensaje || 'Error al iniciar sesión';
+      console.error('Error detallado:', error);
+      
+      // ✅ Mensajes más amigables según el error
+      let mensaje = 'Error al iniciar sesión';
+      
       if (error.response?.status === 401) {
-        mensaje = 'Correo o contraseña incorrectos';
+        mensaje = '❌ Correo o contraseña incorrectos. Por favor, inténtalo de nuevo.';
       } else if (error.response?.status === 404) {
-        mensaje = 'Usuario no encontrado. ¿Necesitas registrarte?';
+        mensaje = '❌ Usuario no encontrado. ¿Necesitas registrarte?';
+      } else if (error.response?.status === 500) {
+        mensaje = '❌ Error del servidor. Intenta más tarde.';
+      } else if (error.message === 'Network Error') {
+        mensaje = '❌ Error de conexión. Verifica tu internet.';
+      } else if (error.response?.data?.mensaje) {
+        mensaje = error.response.data.mensaje;
       }
+      
       toast.error(mensaje);
     } finally {
       setIsLoading(false);
@@ -190,7 +201,8 @@ const Login = () => {
               <div className="flex-1">
                 <p className="font-semibold">¡Bienvenido a Quiniela Lucalza!</p>
                 <p className="text-sm opacity-95 mt-1">
-                                  </p>
+                  ¿Es tu primera vez? Revisa la guía haciendo clic en el botón de ayuda.
+                </p>
               </div>
               <button onClick={cerrarAyudaPermanente} className="text-white/70 hover:text-white">
                 <X className="h-4 w-4" />
