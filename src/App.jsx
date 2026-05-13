@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import NotificationInitializer from './components/NotificationInitializer';
 import { io } from 'socket.io-client';
 
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Navbar from './components/common/Navbar';
+import { SocketStatus } from './components/SocketStatus';
 
 import HomePage from './pages/HomePage';
 import QuinielasPage from './pages/QuinielasPage';
@@ -36,7 +36,37 @@ import QuinielaDetallePage from './pages/admin/QuinielaDetallePage';
 
 const API_URL = import.meta.env.VITE_API;
 let deferredPromptGlobal = null;
-let socketPresencia = null;
+
+// ✅ Socket global único para toda la app
+let globalSocket = null;
+let socketEventHandlers = new Map();
+
+// ✅ Función para obtener el socket global (para usar en hooks)
+export const getGlobalSocket = () => globalSocket;
+
+// ✅ Función para suscribirse a eventos globales
+export const subscribeToSocketEvent = (event, handler) => {
+  if (!socketEventHandlers.has(event)) {
+    socketEventHandlers.set(event, new Set());
+  }
+  socketEventHandlers.get(event).add(handler);
+  
+  // Si el socket ya existe, suscribir inmediatamente
+  if (globalSocket) {
+    globalSocket.on(event, handler);
+  }
+  
+  // Devolver función para desuscribirse
+  return () => {
+    const handlers = socketEventHandlers.get(event);
+    if (handlers) {
+      handlers.delete(handler);
+      if (globalSocket) {
+        globalSocket.off(event, handler);
+      }
+    }
+  };
+};
 
 // ============================================
 // 🔒 PRIVATE ROUTE
@@ -83,11 +113,11 @@ const PrivateLayout = ({ children }) => (
 );
 
 // ============================================
-// 🕐 SESSION MONITOR - MOVIDO DENTRO DEL ROUTER
+// 🕐 SESSION MONITOR
 // ============================================
 function SessionMonitor() {
   const { logout, isAuthenticated } = useAuth();
-  const navigate = useNavigate(); // ✅ Ahora está dentro del Router
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -111,18 +141,172 @@ function SessionMonitor() {
 }
 
 // ============================================
+// 🌐 SOCKET MANAGER UNIFICADO
+// ============================================
+function SocketManager() {
+  const { isAuthenticated, user } = useAuth();
+  const isRegisteredRef = useRef(false);
+  const reconnectAttempts = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 10;
+
+  const registerUserPresence = () => {
+    if (!globalSocket?.connected || !isAuthenticated || !user?.U_CODIGO) return;
+    if (isRegisteredRef.current) return;
+
+    console.log('📝 Registrando usuario en presencia:', user.U_CODIGO);
+    globalSocket.emit('registrar-usuario', {
+      u_codigo: user.U_CODIGO,
+      nombre: `${user.U_NOMBRE || ''} ${user.U_APELLIDO || ''}`.trim() || user.U_CORREO
+    });
+    isRegisteredRef.current = true;
+  };
+
+  const setupSocket = () => {
+    if (!isAuthenticated || !user?.U_CODIGO) return;
+
+    // Si ya hay socket conectado, solo registrar presencia
+    if (globalSocket?.connected) {
+      console.log('✅ Usando socket existente');
+      registerUserPresence();
+      return;
+    }
+
+    // Desconectar socket anterior si existe
+    if (globalSocket) {
+      globalSocket.disconnect();
+      globalSocket = null;
+    }
+
+    console.log('🔌 Creando nueva conexión socket...');
+    globalSocket = io(API_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: true
+    });
+
+    // Restaurar todos los event handlers guardados
+    socketEventHandlers.forEach((handlers, event) => {
+      handlers.forEach(handler => {
+        globalSocket.on(event, handler);
+      });
+    });
+
+    // Manejar conexión
+    globalSocket.on('connect', () => {
+      console.log('✅ Socket conectado correctamente');
+      reconnectAttempts.current = 0;
+      isRegisteredRef.current = false;
+      registerUserPresence();
+    });
+
+    // Manejar reconexión
+    globalSocket.on('reconnect', (attemptNumber) => {
+      console.log(`🔄 Socket reconectado después de ${attemptNumber} intentos`);
+      isRegisteredRef.current = false;
+      registerUserPresence();
+    });
+
+    globalSocket.on('reconnecting', (attemptNumber) => {
+      console.log(`🔄 Reconectando... Intento ${attemptNumber}`);
+    });
+
+    globalSocket.on('connect_error', (error) => {
+      console.error('❌ Error de conexión:', error.message);
+      reconnectAttempts.current++;
+    });
+
+    globalSocket.on('disconnect', (reason) => {
+      console.log(`🔌 Socket desconectado: ${reason}`);
+      isRegisteredRef.current = false;
+      
+      if (reason === 'io server disconnect') {
+        setTimeout(() => {
+          if (isAuthenticated && globalSocket) {
+            globalSocket.connect();
+          }
+        }, 1000);
+      }
+    });
+
+    // Eventos de presencia
+    globalSocket.on('sesion-duplicada', (data) => {
+      console.warn('⚠️ Sesión duplicada:', data);
+      alert('⚠️ Tu sesión se ha abierto en otro dispositivo. Serás redirigido al login.');
+      sessionStorage.clear();
+      window.location.href = '/login';
+    });
+
+    globalSocket.on('usuario-conectado', (data) => {
+      console.log('👤 Usuario conectado:', data);
+    });
+
+    globalSocket.on('usuario-desconectado', (data) => {
+      console.log('👤 Usuario desconectado:', data);
+    });
+  };
+
+  // Conectar/desconectar según autenticación
+  useEffect(() => {
+    if (isAuthenticated && user?.U_CODIGO) {
+      setupSocket();
+    } else if (!isAuthenticated && globalSocket) {
+      console.log('🔌 Cerrando socket por logout');
+      globalSocket.disconnect();
+      globalSocket = null;
+      isRegisteredRef.current = false;
+    }
+
+    return () => {
+      // No desconectar automáticamente para mantener la conexión entre páginas
+    };
+  }, [isAuthenticated, user?.U_CODIGO]);
+
+  // Manejar visibilidad y red
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isAuthenticated && user?.U_CODIGO) {
+        if (!globalSocket?.connected) {
+          console.log('📱 Página visible, reconectando...');
+          setupSocket();
+        } else if (globalSocket?.connected && !isRegisteredRef.current) {
+          registerUserPresence();
+        }
+      }
+    };
+
+    const handleOnline = () => {
+      console.log('🌐 Red recuperada, reconectando...');
+      if (isAuthenticated && user?.U_CODIGO) {
+        setupSocket();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [isAuthenticated, user?.U_CODIGO]);
+
+  return null;
+}
+
+// ============================================
 // ROUTES
 // ============================================
 function AppRoutes() {
   return (
     <>
-      <SessionMonitor /> {/* ✅ Movido aquí dentro del Router */}
+      <SessionMonitor />
       <Routes>
-        {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
-        {/* PRIVATE */}
         <Route path="/" element={<PrivateRoute><PrivateLayout><HomePage /></PrivateLayout></PrivateRoute>} />
         <Route path="/quinielas" element={<PrivateRoute><PrivateLayout><QuinielasPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/quinielas/:id" element={<PrivateRoute><PrivateLayout><QuinielaDetailPage /></PrivateLayout></PrivateRoute>} />
@@ -131,8 +315,6 @@ function AppRoutes() {
         <Route path="/mis-aciertos" element={<PrivateRoute><PrivateLayout><MisAciertosPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/mis-quinielas" element={<PrivateRoute><PrivateLayout><MisQuinielasPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/quinielas/:id/pronosticos" element={<PrivateRoute><PrivateLayout><PronosticosQuinielaPage /></PrivateLayout></PrivateRoute>} />
-
-        {/* ADMIN */}
         <Route path="/admin" element={<AdminRoute><PrivateLayout><AdminPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/campeonatos" element={<AdminRoute><PrivateLayout><CampeonatosPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/campeonatos/:c_campeonato" element={<AdminRoute><PrivateLayout><CampeonatoDetallePage /></PrivateLayout></AdminRoute>} />
@@ -149,53 +331,9 @@ function AppRoutes() {
 
       <Toaster position="top-right" />
       <PushNotificaciones />
+      <SocketStatus />
     </>
   );
-}
-
-// ============================================
-// COMPONENTE DE PRESENCIA (dentro de AuthProvider)
-// ============================================
-function PresenceManager() {
-  const { isAuthenticated, user } = useAuth();
-
-  useEffect(() => {
-    if (isAuthenticated && user && user.U_CODIGO) {
-      if (!socketPresencia) {
-        socketPresencia = io(API_URL, {
-          transports: ['websocket', 'polling'],
-          reconnection: true
-        });
-
-        socketPresencia.on('connect', () => {
-          console.log('🔌 Conectado a servidor de presencia');
-          socketPresencia.emit('registrar-usuario', {
-            u_codigo: user.U_CODIGO,
-            nombre: `${user.U_NOMBRE || ''} ${user.U_APELLIDO || ''}`.trim() || user.U_CORREO
-          });
-        });
-
-        socketPresencia.on('sesion-duplicada', (data) => {
-          console.warn('⚠️ Sesión duplicada detectada:', data);
-          alert('⚠️ Tu sesión se ha abierto en otro dispositivo. Serás redirigido al login.');
-          sessionStorage.clear();
-          window.location.href = '/login';
-        });
-      }
-    } else if (!isAuthenticated && socketPresencia) {
-      socketPresencia.disconnect();
-      socketPresencia = null;
-    }
-
-    return () => {
-      if (socketPresencia && !isAuthenticated) {
-        socketPresencia.disconnect();
-        socketPresencia = null;
-      }
-    };
-  }, [isAuthenticated, user]);
-
-  return null;
 }
 
 // ============================================
@@ -205,10 +343,7 @@ function App() {
   const [puedeInstalar, setPuedeInstalar] = useState(false);
 
   useEffect(() => {
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone;
-
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     if (isStandalone) return;
 
     const handler = (e) => {
@@ -225,10 +360,8 @@ function App() {
 
   const instalarApp = async () => {
     if (!deferredPromptGlobal) return;
-
     deferredPromptGlobal.prompt();
     await deferredPromptGlobal.userChoice;
-
     deferredPromptGlobal = null;
     setPuedeInstalar(false);
   };
@@ -236,13 +369,10 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <PresenceManager />
-        <AppRoutes /> {/* SessionMonitor está dentro de AppRoutes */}
+        <SocketManager />
+        <AppRoutes />
         {puedeInstalar && (
-          <button
-            onClick={instalarApp}
-            className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50"
-          >
+          <button onClick={instalarApp} className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
             📲 Instalar App
           </button>
         )}
