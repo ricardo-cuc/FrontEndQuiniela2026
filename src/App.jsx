@@ -8,6 +8,7 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Navbar from './components/common/Navbar';
 import { SocketStatus } from './components/SocketStatus';
+import { FloatingHelpWidget } from './components/help/FloatingHelpWidget'; // ✅ IMPORTACIÓN CORRECTA
 
 import HomePage from './pages/HomePage';
 import QuinielasPage from './pages/QuinielasPage';
@@ -51,12 +52,10 @@ export const subscribeToSocketEvent = (event, handler) => {
   }
   socketEventHandlers.get(event).add(handler);
   
-  // Si el socket ya existe, suscribir inmediatamente
   if (globalSocket) {
     globalSocket.on(event, handler);
   }
   
-  // Devolver función para desuscribirse
   return () => {
     const handlers = socketEventHandlers.get(event);
     if (handlers) {
@@ -164,14 +163,12 @@ function SocketManager() {
   const setupSocket = () => {
     if (!isAuthenticated || !user?.U_CODIGO) return;
 
-    // Si ya hay socket conectado, solo registrar presencia
     if (globalSocket?.connected) {
       console.log('✅ Usando socket existente');
       registerUserPresence();
       return;
     }
 
-    // Desconectar socket anterior si existe
     if (globalSocket) {
       globalSocket.disconnect();
       globalSocket = null;
@@ -188,14 +185,12 @@ function SocketManager() {
       autoConnect: true
     });
 
-    // Restaurar todos los event handlers guardados
     socketEventHandlers.forEach((handlers, event) => {
       handlers.forEach(handler => {
         globalSocket.on(event, handler);
       });
     });
 
-    // Manejar conexión
     globalSocket.on('connect', () => {
       console.log('✅ Socket conectado correctamente');
       reconnectAttempts.current = 0;
@@ -203,7 +198,6 @@ function SocketManager() {
       registerUserPresence();
     });
 
-    // Manejar reconexión
     globalSocket.on('reconnect', (attemptNumber) => {
       console.log(`🔄 Socket reconectado después de ${attemptNumber} intentos`);
       isRegisteredRef.current = false;
@@ -232,7 +226,6 @@ function SocketManager() {
       }
     });
 
-    // Eventos de presencia
     globalSocket.on('sesion-duplicada', (data) => {
       console.warn('⚠️ Sesión duplicada:', data);
       alert('⚠️ Tu sesión se ha abierto en otro dispositivo. Serás redirigido al login.');
@@ -249,7 +242,6 @@ function SocketManager() {
     });
   };
 
-  // Conectar/desconectar según autenticación
   useEffect(() => {
     if (isAuthenticated && user?.U_CODIGO) {
       setupSocket();
@@ -260,12 +252,9 @@ function SocketManager() {
       isRegisteredRef.current = false;
     }
 
-    return () => {
-      // No desconectar automáticamente para mantener la conexión entre páginas
-    };
+    return () => {};
   }, [isAuthenticated, user?.U_CODIGO]);
 
-  // Manejar visibilidad y red
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && isAuthenticated && user?.U_CODIGO) {
@@ -328,9 +317,6 @@ function AppRoutes() {
         <Route path="/admin/resultados" element={<AdminRoute><PrivateLayout><SeleccionarQuinielaResultados /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/quinielas/:id/resultados" element={<AdminRoute><PrivateLayout><ResultadosPage /></PrivateLayout></AdminRoute>} />
       </Routes>
-
-      <Toaster position="top-right" />
-      <SocketStatus />
     </>
   );
 }
@@ -368,9 +354,11 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Toaster position="top-right" />
         <SocketManager />
         <AppRoutes />
+        <Toaster position="top-right" />
+        <PushNotificaciones />
+        <SocketStatus />
         <FloatingHelpWidget /> {/* ✅ Widget de ayuda flotante */}
         {puedeInstalar && (
           <button onClick={instalarApp} className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
