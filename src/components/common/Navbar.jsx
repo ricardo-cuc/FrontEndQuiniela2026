@@ -143,20 +143,10 @@ const Navbar = () => {
                         <span>Mis Quinielas</span>
                       </div>
                     </Link>
-                    <Link
-                      to="/ranking/1"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setShowHelpMenu(false)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg">🏆</span>
-                        <span>Ver Ranking</span>
-                      </div>
-                    </Link>
                     <div className="border-t border-gray-200"></div>
                     <button
                       onClick={() => {
-                        window.open('https://wa.me/123456789?text=Necesito ayuda con Quiniela Lucalza', '_blank');
+                        window.open('https://wa.me/+50230339566?text=Necesito ayuda con Quiniela Lucalza', '_blank');
                         setShowHelpMenu(false);
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
