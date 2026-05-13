@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import NotificationInitializer from './components/NotificationInitializer';
@@ -83,11 +83,11 @@ const PrivateLayout = ({ children }) => (
 );
 
 // ============================================
-// 🕐 SESSION MONITOR - Escucha eventos de expiración
+// 🕐 SESSION MONITOR - MOVIDO DENTRO DEL ROUTER
 // ============================================
 function SessionMonitor() {
   const { logout, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // ✅ Ahora está dentro del Router
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -100,7 +100,6 @@ function SessionMonitor() {
       }
     };
 
-    // Escuchar evento personalizado de expiración
     window.addEventListener('sessionExpired', handleSessionExpired);
     
     return () => {
@@ -117,6 +116,7 @@ function SessionMonitor() {
 function AppRoutes() {
   return (
     <>
+      <SessionMonitor /> {/* ✅ Movido aquí dentro del Router */}
       <Routes>
         {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
@@ -236,9 +236,8 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <SessionMonitor /> {/* ✅ Monitor de sesión expirada */}
         <PresenceManager />
-        <AppRoutes />
+        <AppRoutes /> {/* SessionMonitor está dentro de AppRoutes */}
         {puedeInstalar && (
           <button
             onClick={instalarApp}
