@@ -1,4 +1,4 @@
-// components/participantes/ModalParticipantes.jsx (VERSIÓN MEJORADA)
+// components/participantes/ModalParticipantes.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import api from '../../services/api';
@@ -20,6 +20,18 @@ const emojisDisponibles = [
   { id: '👏', emoji: '👏', nombre: 'Aplausos', categoria: 'reacciones' },
   { id: '🙌', emoji: '🙌', nombre: 'Celebración', categoria: 'reacciones' },
   { id: '💯', emoji: '💯', nombre: 'Perfecto', categoria: 'reacciones' },
+  { id: '😊', emoji: '😊', nombre: 'Sonrisa', categoria: 'reacciones' },
+  { id: '😍', emoji: '😍', nombre: 'Amor', categoria: 'reacciones' },
+  { id: '🤔', emoji: '🤔', nombre: 'Pensando', categoria: 'reacciones' },
+  { id: '😢', emoji: '😢', nombre: 'Triste', categoria: 'reacciones' },
+  { id: '🥅', emoji: '🥅', nombre: 'Arco', categoria: 'deportes' },
+  { id: '🎊', emoji: '🎊', nombre: 'Confeti', categoria: 'celebración' },
+  { id: '✨', emoji: '✨', nombre: 'Brillante', categoria: 'celebración' },
+  { id: '💙', emoji: '💙', nombre: 'Corazón Azul', categoria: 'reacciones' },
+  { id: '🍿', emoji: '🍿', nombre: 'Palomitas', categoria: 'entretenimiento' },
+  { id: '🥇', emoji: '🥇', nombre: 'Oro', categoria: 'deportes' },
+  { id: '⚡', emoji: '⚡', nombre: 'Rayo', categoria: 'energía' },
+  { id: '🙏', emoji: '🙏', nombre: 'Gracias', categoria: 'social' }
 ];
 
 // Emojis usados recientemente (se guardan en localStorage)
@@ -61,12 +73,24 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [page, setPage] = useState(1);
+  const [usuarioActual, setUsuarioActual] = useState(null);
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const recentEmojis = getRecentEmojis();
+
+  // Obtener usuario actual
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        setUsuarioActual(parsed.U_CODIGO);
+      } catch (e) {}
+    }
+  }, []);
 
   // Filtrar participantes por búsqueda
   useEffect(() => {
@@ -87,17 +111,27 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
     setAutoScroll(isNearBottom);
-    
-    // Si el usuario hace scroll hacia arriba y hay mensajes nuevos, resetear contador
-    if (!isNearBottom && newMessagesCount > 0) {
-      // No resetear automáticamente, solo si el usuario hace clic en "ver nuevos"
-    }
   };
 
   // Scroll al final si autoScroll está activo
   const scrollToBottom = () => {
     if (autoScroll && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  };
+
+  // Mostrar notificación de reacción
+  const mostrarNotificacionReaccion = (reaccion) => {
+    // Solo mostrar notificación si el receptor es el usuario actual
+    if (reaccion.receptorId === usuarioActual) {
+      toast.success(`💬 ${reaccion.emisorNombre || 'Alguien'} te envió ${reaccion.emoji}`, {
+        duration: 3000,
+        icon: reaccion.emoji,
+        style: {
+          background: '#4f46e5',
+          color: '#fff',
+        },
+      });
     }
   };
 
@@ -126,7 +160,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           console.log('📢 Nuevo mensaje recibido:', nuevoMensaje);
           setMensajes(prev => [...prev, nuevoMensaje]);
           
-          // Si el chat no está enfocado o autoScroll desactivado, incrementar contador
           if (!isChatFocused || !autoScroll) {
             setNewMessagesCount(prev => prev + 1);
           } else {
@@ -145,14 +178,27 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           }, 2000);
         });
 
-        // Escuchar nuevas reacciones
+        // ✅ Escuchar nuevas reacciones (MEJORADO)
         socketRef.current.on('nueva-reaccion', (reaccion) => {
-          console.log('😊 Nueva reacción recibida:', reaccion);
+          console.log('😊 NUEVA REACCIÓN RECIBIDA EN TIEMPO REAL:', reaccion);
+          
+          // Actualizar el participante que recibió la reacción
           setParticipantes(prev => prev.map(p => 
             p.U_CODIGO === reaccion.receptorId
-              ? { ...p, reacciones: [...(p.reacciones || []), { emoji: reaccion.emoji, de: reaccion.emisorId, fecha: new Date() }] }
+              ? { 
+                  ...p, 
+                  reacciones: [...(p.reacciones || []), { 
+                    emoji: reaccion.emoji, 
+                    de: reaccion.emisorId,
+                    emisorNombre: reaccion.emisorNombre,
+                    fecha: new Date()
+                  }] 
+                }
               : p
           ));
+          
+          // ✅ Mostrar notificación al receptor
+          mostrarNotificacionReaccion(reaccion);
         });
       } else {
         socketRef.current.emit('join-quiniela', quinielaId);
@@ -252,7 +298,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     
     setEnviando(true);
     try {
-      const response = await api.post(`/api/quinielas/${quinielaId}/mensajes`, {
+      await api.post(`/api/quinielas/${quinielaId}/mensajes`, {
         mensaje: nuevoMensaje,
         tipo: 'texto'
       });
@@ -278,14 +324,19 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   // Enviar reacción
   const enviarReaccion = async (receptorId, emoji) => {
     try {
-      await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
+      const response = await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
         usuario_id: receptorId,
         emoji: emoji.emoji
       });
       
       saveRecentEmoji(emoji);
+      
+      // Mostrar confirmación local
       toast.success(`Reacción ${emoji.emoji} enviada`);
       setShowEmojis(null);
+      
+      // El servidor emitirá el evento a todos los conectados
+      console.log('✅ Reacción enviada al servidor');
       
     } catch (error) {
       console.error('Error enviando reacción:', error);
@@ -338,7 +389,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             <p className="text-sm text-indigo-200">{quinielaNombre}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Botón de búsqueda en móvil */}
             <button 
               onClick={() => setSearchTerm(searchTerm ? '' : 'buscar')}
               className="md:hidden text-white/70 hover:text-white"
@@ -355,7 +405,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           </div>
         </div>
 
-        {/* Barra de búsqueda (visible en desktop) */}
+        {/* Barra de búsqueda */}
         <div className="hidden md:block p-3 border-b border-gray-200 bg-gray-50">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -421,7 +471,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                         
                         {showEmojis === p.U_CODIGO && (
                           <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-10 w-80">
-                            {/* Emojis recientes */}
                             {recentEmojis.length > 0 && showRecentEmojis && (
                               <div className="mb-3">
                                 <div className="flex justify-between items-center mb-2">
@@ -448,7 +497,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                                 <div className="border-t border-gray-100 my-2"></div>
                               </div>
                             )}
-                            {/* Emojis por categoría */}
                             <div className="max-h-64 overflow-y-auto">
                               {Object.entries(emojisPorCategoria).map(([categoria, emojis]) => (
                                 <div key={categoria} className="mb-3">
@@ -511,7 +559,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               </button>
             </div>
             
-            {/* Contenedor de mensajes */}
             <div 
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3"
@@ -519,7 +566,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               onScroll={handleScroll}
               tabIndex={0}
             >
-              {/* Botón para cargar más mensajes */}
               {hasMoreMessages && !loading && (
                 <div className="text-center">
                   <button
@@ -558,7 +604,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 ))
               )}
               
-              {/* Indicador de escritura */}
               {Object.values(typingUsers).some(v => v) && (
                 <div className="text-xs text-gray-400 italic">
                   {Object.entries(typingUsers)
@@ -568,7 +613,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 </div>
               )}
               
-              {/* Botón para ir a mensajes nuevos */}
               {newMessagesCount > 0 && !autoScroll && (
                 <button
                   onClick={() => {
@@ -585,7 +629,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input de mensaje */}
             <div className="p-4 border-t border-gray-200 bg-gray-50">
               <div className="flex gap-2">
                 <input
