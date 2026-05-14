@@ -5,7 +5,7 @@ import { Trophy, Users, Award, TrendingUp, CheckCircle, Star, Bell, X } from 'lu
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useSocket } from '../hooks/useSocket';
-import { OnboardingTour } from '../components/onboarding/OnboardingTour';
+import { DriverTour } from '../components/onboarding/DriverTour';
 import { FloatingHelpWidget } from '../components/help/FloatingHelpWidget';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ModalParticipantes } from '../components/participantes/ModalParticipantes';
@@ -65,9 +65,9 @@ const HomePage = () => {
 
   // Verificar si debe mostrar el tour
   useEffect(() => {
-    const tourCompleted = localStorage.getItem('onboarding_completed');
+    const tourCompleted = localStorage.getItem('driver_tour_completed');
     if (!tourCompleted && user && !loading) {
-      setTimeout(() => setShowTour(true), 1000);
+      setTimeout(() => setShowTour(true), 1500);
     }
   }, [user, loading]);
 
@@ -93,7 +93,6 @@ const HomePage = () => {
           cargarEstadisticas();
           break;
         case 'NUEVO_MENSAJE_CHAT':
-          // Incrementar contador de mensajes no leídos para esta quiniela
           const quinielaId = lastMessage.quinielaId;
           if (quinielaId) {
             setMensajesNoLeidos(prev => ({
@@ -243,8 +242,8 @@ const HomePage = () => {
 
   return (
     <div className="space-y-8">
-      {/* Tour guiado para nuevos usuarios */}
-      {showTour && <OnboardingTour onComplete={() => setShowTour(false)} />}
+      {/* Tour guiado interactivo para nuevos usuarios */}
+      {showTour && <DriverTour onComplete={() => setShowTour(false)} />}
 
       {/* Widget de ayuda flotante */}
       <FloatingHelpWidget />
@@ -429,10 +428,11 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Tarjeta de Participantes - CON BADGE DE MENSAJES NO LEÍDOS */}
+        {/* Tarjeta de Participantes */}
         <div
           onClick={handleParticipantesClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group relative"
+          id="participantes-link"
         >
           <div className="relative inline-block">
             <Users className="h-8 w-8 text-indigo-600 mb-2 group-hover:scale-110 transition" />
@@ -452,6 +452,21 @@ const HomePage = () => {
           )}
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
             <InfoTooltip message="Ver participantes y enviar reacciones" position="left" />
+          </div>
+        </div>
+
+        {/* Tarjeta de Ranking */}
+        <div
+          onClick={() => navigate('/ranking/15')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-purple-50 group relative"
+          id="ranking-link"
+        >
+          <Trophy className="h-8 w-8 text-purple-600 mb-2 group-hover:scale-110 transition" />
+          <h3 className="text-lg font-semibold text-gray-700">Ranking</h3>
+          <p className="text-3xl font-bold text-purple-600">#1</p>
+          <p className="text-sm text-gray-400 mt-2">Tu posición</p>
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+            <InfoTooltip message="Ver el ranking de esta quiniela" position="left" />
           </div>
         </div>
       </div>
