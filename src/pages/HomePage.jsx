@@ -329,7 +329,7 @@ const HomePage = () => {
               </span>
             )}
           </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-700">Participantes</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-700">Participantes y Chat</h3>
           <p className="text-2xl sm:text-3xl font-bold text-indigo-600">{stats.participantes}</p>
           <p className="text-xs sm:text-sm text-gray-400 mt-1">¡Interactúa con ellos!</p>
           {totalMensajesNoLeidos > 0 && (
