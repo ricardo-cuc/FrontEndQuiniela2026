@@ -122,6 +122,7 @@ const Navbar = () => {
                   <div className="py-1">
                     <button
                       onClick={() => {
+                        localStorage.removeItem('driver_tour_completed');
                         localStorage.removeItem('onboarding_completed');
                         window.location.href = '/';
                         setShowHelpMenu(false);
@@ -130,7 +131,7 @@ const Navbar = () => {
                     >
                       <div className="flex items-center space-x-2">
                         <span className="text-lg">🎓</span>
-                        <span>Ver tour guiado nuevamente</span>
+                        <span>Ver tour interactivo</span>
                       </div>
                     </button>
                     <Link
