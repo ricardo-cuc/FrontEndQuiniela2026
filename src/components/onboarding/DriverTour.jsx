@@ -6,46 +6,35 @@ const steps = [
   {
     id: 'welcome',
     title: '🎉 ¡Bienvenido a Quiniela Lucalza!',
-    description: 'Te mostraremos paso a paso cómo funciona todo. No te preocupes, es muy fácil y no tienes que hacer clic en nada ahora.',
+    description: 'Te mostraremos paso a paso cómo funciona todo. No te preocupes, es muy fácil.',
     target: null,
     position: 'center'
   },
   {
     id: 'mis-quinielas',
     title: '📋 Mis Quinielas',
-    description: 'Aquí están todas las quinielas en las que participas. Cada quiniela tiene sus propios partidos, reglas y ranking.',
+    description: 'Aquí están todas las quinielas en las que participas.',
     target: 'mis-quinielas-link',
-    position: 'bottom',
-    tip: '💡 Puedes hacer clic aquí después del tour para ver tus quinielas.'
+    position: 'bottom'
   },
   {
     id: 'participantes-chat',
     title: '💬 Participantes y Chat',
-    description: '¡Nueva función! Aquí puedes ver quién más participa, enviar mensajes y reaccionar con emojis a los comentarios.',
+    description: '¡Nueva función! Aquí puedes ver quién más participa, enviar mensajes y reaccionar con emojis.',
     target: 'participantes-link',
-    position: 'bottom',
-    tip: '💡 El chat es en tiempo real. Puedes enviar mensajes y reaccionar con 👍, ❤️, 😂, 🎉 y más.'
+    position: 'bottom'
   },
   {
     id: 'ranking',
     title: '🏆 Ranking',
-    description: 'Puedes ver tu posición en cada quiniela y competir con otros usuarios. Cada acierto suma puntos.',
+    description: 'Puedes ver tu posición en cada quiniela y competir con otros usuarios.',
     target: 'ranking-link',
-    position: 'bottom',
-    tip: '💡 Mientras más aciertes, más puntos acumulas y más subes en el ranking.'
-  },
-  {
-    id: 'notificaciones',
-    title: '🔔 Notificaciones en Tiempo Real',
-    description: 'Recibirás alertas cuando haya resultados nuevos, cambios en el ranking o mensajes nuevos en el chat.',
-    target: null,
-    position: 'center',
-    tip: '💡 También verás un badge rojo en la tarjeta de Participantes cuando haya mensajes nuevos.'
+    position: 'bottom'
   },
   {
     id: 'completado',
     title: '🎉 ¡Listo para comenzar!',
-    description: 'Ya conoces las principales funciones. Ahora puedes explorar la aplicación por tu cuenta. ¡Buena suerte!',
+    description: 'Ya conoces las principales funciones. ¡Buena suerte!',
     target: null,
     position: 'center'
   }
@@ -56,35 +45,111 @@ export const DriverTour = ({ onComplete }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [targetRect, setTargetRect] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+  const [isMobile, setIsMobile] = useState(false);
 
   const step = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
-  // Obtener posición del elemento objetivo
+  // Detectar si es móvil
   useEffect(() => {
-    if (step.target) {
-      const element = document.getElementById(step.target);
-      if (element) {
-        const rect = element.getBoundingClientRect();
-        setTargetRect({
-          top: rect.top + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-          height: rect.height,
-          bottom: rect.bottom + window.scrollY,
-          right: rect.right + window.scrollX
-        });
-        
-        // Scroll suave al elemento
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Obtener y actualizar posición del elemento objetivo
+  useEffect(() => {
+    const updatePosition = () => {
+      if (step.target) {
+        const element = document.getElementById(step.target);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+          
+          setTargetRect({
+            top: rect.top + scrollTop,
+            left: rect.left + scrollLeft,
+            width: rect.width,
+            height: rect.height,
+            bottom: rect.bottom + scrollTop,
+            right: rect.right + scrollLeft,
+            clientTop: rect.top,
+            clientLeft: rect.left
+          });
+
+          // Calcular posición del tooltip según el dispositivo
+          let newPosition = {};
+          
+          if (isMobile) {
+            // En móvil, el tooltip va debajo del elemento
+            newPosition = {
+              top: rect.bottom + scrollTop + 15,
+              left: scrollLeft + window.innerWidth / 2,
+              transform: 'translateX(-50%)'
+            };
+          } else {
+            // En desktop, calcular posición según el lado disponible
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const spaceRight = window.innerWidth - rect.right;
+            const spaceLeft = rect.left;
+            
+            // Elegir la mejor posición
+            if (spaceBelow > 300) {
+              newPosition = {
+                top: rect.bottom + scrollTop + 15,
+                left: rect.left + scrollLeft + rect.width / 2,
+                transform: 'translateX(-50%)'
+              };
+            } else if (spaceAbove > 300) {
+              newPosition = {
+                top: rect.top + scrollTop - 15,
+                left: rect.left + scrollLeft + rect.width / 2,
+                transform: 'translateX(-50%) translateY(-100%)'
+              };
+            } else if (spaceRight > 300) {
+              newPosition = {
+                top: rect.top + scrollTop + rect.height / 2,
+                left: rect.right + scrollLeft + 15,
+                transform: 'translateY(-50%)'
+              };
+            } else {
+              newPosition = {
+                top: rect.bottom + scrollTop + 15,
+                left: scrollLeft + window.innerWidth / 2,
+                transform: 'translateX(-50%)'
+              };
+            }
+          }
+          
+          setTooltipPosition(newPosition);
+          
+          // Scroll suave al elemento
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          setTargetRect(null);
+        }
       } else {
         setTargetRect(null);
+        setTooltipPosition({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
       }
-    } else {
-      setTargetRect(null);
-    }
-  }, [currentStep, step.target]);
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, [currentStep, step.target, isMobile]);
 
   const handleNext = () => {
     if (isAnimating) return;
@@ -122,31 +187,12 @@ export const DriverTour = ({ onComplete }) => {
 
   if (!isVisible) return null;
 
-  // Calcular posición del tooltip
-  const getTooltipPosition = () => {
-    if (!targetRect) {
-      return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-    }
-
-    const positions = {
-      top: { top: targetRect.top - 20, left: targetRect.left + targetRect.width / 2, transform: 'translateX(-50%) translateY(-100%)' },
-      bottom: { top: targetRect.bottom + 20, left: targetRect.left + targetRect.width / 2, transform: 'translateX(-50%)' },
-      left: { top: targetRect.top + targetRect.height / 2, left: targetRect.left - 20, transform: 'translateX(-100%) translateY(-50%)' },
-      right: { top: targetRect.top + targetRect.height / 2, left: targetRect.right + 20, transform: 'translateY(-50%)' }
-    };
-
-    const pos = positions[step.position] || positions.bottom;
-    return { top: `${pos.top}px`, left: `${pos.left}px`, transform: pos.transform };
-  };
-
-  const tooltipStyle = getTooltipPosition();
-
   return (
     <>
-      {/* Overlay oscuro con agujero para el elemento resaltado */}
+      {/* Overlay oscuro */}
       <div className="fixed inset-0 z-50">
         {targetRect ? (
-          <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+          <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'auto' }}>
             <defs>
               <mask id="hole-mask">
                 <rect width="100%" height="100%" fill="white" />
@@ -166,7 +212,6 @@ export const DriverTour = ({ onComplete }) => {
               fill="black"
               fillOpacity="0.7"
               mask="url(#hole-mask)"
-              style={{ pointerEvents: 'auto' }}
               onClick={handleSkip}
             />
             {/* Borde de resaltado */}
@@ -185,21 +230,26 @@ export const DriverTour = ({ onComplete }) => {
         ) : (
           <div 
             className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
-            style={{ pointerEvents: 'auto' }}
             onClick={handleSkip}
           />
         )}
       </div>
 
-      {/* Tooltip flotante */}
+      {/* Tooltip flotante - Ahora responsivo */}
       <div 
-        className={`fixed z-50 bg-white rounded-2xl shadow-2xl max-w-md w-full transition-all duration-300 ${
+        className={`fixed z-50 bg-white rounded-2xl shadow-2xl transition-all duration-300 ${
           isAnimating ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-        }`}
-        style={tooltipStyle}
+        } ${isMobile ? 'w-[calc(100%-32px)] max-w-sm' : 'w-80 md:w-96'}`}
+        style={{
+          top: tooltipPosition.top,
+          left: tooltipPosition.left,
+          transform: tooltipPosition.transform,
+          maxHeight: '80vh',
+          overflow: 'auto'
+        }}
       >
         {/* Progress bar */}
-        <div className="h-1.5 bg-gray-100 rounded-t-2xl overflow-hidden">
+        <div className="h-1.5 bg-gray-100 rounded-t-2xl overflow-hidden sticky top-0">
           <div 
             className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -219,7 +269,7 @@ export const DriverTour = ({ onComplete }) => {
               onClick={handleSkip}
               className="text-xs text-gray-400 hover:text-gray-600 transition px-2 py-1 rounded-lg hover:bg-gray-100"
             >
-              Omitir tour
+              Omitir
             </button>
             <button 
               onClick={handleSkip} 
@@ -231,23 +281,16 @@ export const DriverTour = ({ onComplete }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-5">
           <div className="text-center mb-4">
-            <span className="text-6xl block mb-3">{step.title.split(' ')[0]}</span>
+            <span className="text-5xl block mb-3">{step.title.split(' ')[0]}</span>
             <h3 className="text-xl font-bold text-gray-900 mb-2">{step.title}</h3>
             <p className="text-gray-600 text-sm leading-relaxed">{step.description}</p>
           </div>
 
-          {/* Tips adicionales */}
-          {step.tip && (
-            <div className="mb-5 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200">
-              <p className="text-xs text-amber-700">{step.tip}</p>
-            </div>
-          )}
-
           {/* Demo visual del chat */}
           {step.id === 'participantes-chat' && (
-            <div className="mb-5 p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-200">
+            <div className="mt-4 p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-200">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white text-xs font-bold">
                   U
@@ -259,33 +302,11 @@ export const DriverTour = ({ onComplete }) => {
                 <div className="flex gap-1">
                   <span className="text-sm">👍</span>
                   <span className="text-sm">❤️</span>
-                  <span className="text-sm">😂</span>
                 </div>
               </div>
               <p className="text-sm text-gray-700 ml-10">¡Qué emoción el partido de hoy! ⚽</p>
-              <div className="flex gap-2 mt-2 ml-10">
-                <span className="text-xs bg-white/50 rounded-full px-2 py-0.5">👍 3</span>
-                <span className="text-xs bg-white/50 rounded-full px-2 py-0.5">❤️ 2</span>
-              </div>
             </div>
           )}
-
-          {/* Indicadores de progreso */}
-          <div className="flex justify-center gap-1.5 mt-4">
-            {steps.map((_, idx) => (
-              <div
-                key={idx}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  idx === currentStep 
-                    ? 'w-6 bg-indigo-600' 
-                    : idx < currentStep 
-                      ? 'w-1.5 bg-indigo-300' 
-                      : 'w-1.5 bg-gray-300'
-                }`}
-                onClick={() => setCurrentStep(idx)}
-              />
-            ))}
-          </div>
         </div>
 
         {/* Buttons */}
@@ -293,10 +314,10 @@ export const DriverTour = ({ onComplete }) => {
           {currentStep > 0 && (
             <button
               onClick={handlePrev}
-              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition flex items-center justify-center gap-2 group"
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition flex items-center justify-center gap-2"
             >
-              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition" />
-              Anterior
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Anterior</span>
             </button>
           )}
           <button
@@ -315,38 +336,21 @@ export const DriverTour = ({ onComplete }) => {
             ) : (
               <>
                 Siguiente
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition" />
+                <ArrowRight className="h-4 w-4" />
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Flecha que apunta al elemento */}
-      {targetRect && (
+      {/* Flecha que apunta al elemento - solo en desktop */}
+      {targetRect && !isMobile && (
         <div 
-          className="fixed z-50 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[16px] border-l-transparent border-r-transparent border-t-white animate-pulse"
+          className="fixed z-50 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[14px] border-l-transparent border-r-transparent border-t-white animate-pulse"
           style={{
-            ...(step.position === 'bottom' && {
-              top: targetRect.bottom + 8,
-              left: targetRect.left + targetRect.width / 2 - 12,
-              transform: 'rotate(0deg)'
-            }),
-            ...(step.position === 'top' && {
-              top: targetRect.top - 24,
-              left: targetRect.left + targetRect.width / 2 - 12,
-              transform: 'rotate(180deg)'
-            }),
-            ...(step.position === 'left' && {
-              top: targetRect.top + targetRect.height / 2 - 8,
-              left: targetRect.left - 24,
-              transform: 'rotate(270deg)'
-            }),
-            ...(step.position === 'right' && {
-              top: targetRect.top + targetRect.height / 2 - 8,
-              left: targetRect.right + 8,
-              transform: 'rotate(90deg)'
-            })
+            top: targetRect.bottom + 5,
+            left: targetRect.left + targetRect.width / 2 - 10,
+            transform: 'rotate(0deg)'
           }}
         />
       )}
