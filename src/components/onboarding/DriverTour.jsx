@@ -1,9 +1,9 @@
 // components/onboarding/DriverTour.jsx
-import React, { useState, useEffect } from 'react';
-import { X, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ArrowRight, ArrowLeft, Check, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const steps = [
-  { id: 'welcome', title: '🎉 ¡Bienvenido!', description: 'Te guiaremos por las funciones principales. Puedes deslizar para ver más.', target: null, position: 'center' },
+  { id: 'welcome', title: '🎉 ¡Bienvenido!', description: 'Te guiaremos por las funciones principales.', target: null, position: 'center' },
   { id: 'mis-quinielas', title: '📋 Mis Quinielas', description: 'Todas las quinielas donde participas.', target: 'mis-quinielas-link', position: 'bottom' },
   { id: 'mis-predicciones', title: '📝 Mis Predicciones', description: 'Historial de tus pronósticos y puntos.', target: 'mis-predicciones-link', position: 'bottom' },
   { id: 'mis-aciertos', title: '🎯 Mis Aciertos', description: 'Partidos que acertaste correctamente.', target: 'mis-aciertos-link', position: 'bottom' },
@@ -18,7 +18,8 @@ export const DriverTour = ({ onComplete }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [targetRect, setTargetRect] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+  const [tooltipPosition, setTooltipPosition] = useState({});
+  const tooltipRef = useRef(null);
   
   const step = steps[currentStep];
   const progress = ((currentStep + 1) / steps.length) * 100;
@@ -27,10 +28,12 @@ export const DriverTour = ({ onComplete }) => {
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
-      // En móvil, permitir scroll del body
       if (window.innerWidth < 768) {
         document.body.style.overflow = 'auto';
         document.body.style.position = 'relative';
+      } else {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
       }
     };
     checkMobile();
@@ -63,40 +66,49 @@ export const DriverTour = ({ onComplete }) => {
           });
 
           // Posicionar tooltip
-          let newTop, newLeft;
-          
           if (isMobile) {
-            // En móvil, tooltip debajo del elemento
-            newTop = rect.bottom + scrollTop + 15;
-            newLeft = scrollLeft + window.innerWidth / 2;
+            // En móvil, tooltip debajo del elemento con margen
+            let newTop = rect.bottom + scrollTop + 20;
+            // Asegurar que no se salga de la pantalla
+            const tooltipHeight = tooltipRef.current?.offsetHeight || 300;
+            const maxTop = scrollTop + window.innerHeight - tooltipHeight - 20;
+            if (newTop + tooltipHeight > scrollTop + window.innerHeight) {
+              newTop = maxTop;
+            }
             setTooltipPosition({
               top: newTop,
-              left: newLeft,
-              transform: 'translateX(-50%)'
+              left: scrollLeft + window.innerWidth / 2,
+              transform: 'translateX(-50%)',
+              bottom: 'auto'
             });
-            // Scroll al elemento
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
             // Desktop: tooltip al lado
             const spaceBelow = window.innerHeight - rect.bottom;
             if (spaceBelow > 300) {
-              newTop = rect.bottom + scrollTop + 15;
-              newLeft = rect.left + scrollLeft + rect.width / 2;
-              setTooltipPosition({ top: newTop, left: newLeft, transform: 'translateX(-50%)' });
+              setTooltipPosition({
+                top: rect.bottom + scrollTop + 15,
+                left: rect.left + scrollLeft + rect.width / 2,
+                transform: 'translateX(-50%)'
+              });
             } else {
-              newTop = rect.top + scrollTop - 15;
-              newLeft = rect.left + scrollLeft + rect.width / 2;
-              setTooltipPosition({ top: newTop, left: newLeft, transform: 'translateX(-50%) translateY(-100%)' });
+              setTooltipPosition({
+                top: rect.top + scrollTop - 15,
+                left: rect.left + scrollLeft + rect.width / 2,
+                transform: 'translateX(-50%) translateY(-100%)'
+              });
             }
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        } else {
-          setTargetRect(null);
-          setTooltipPosition({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+          
+          // Scroll suave al elemento
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       } else {
         setTargetRect(null);
-        setTooltipPosition({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+        setTooltipPosition({
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
+        });
       }
     };
 
@@ -146,10 +158,10 @@ export const DriverTour = ({ onComplete }) => {
 
   return (
     <>
-      {/* Overlay - En móvil no bloquea el scroll */}
-      <div className="fixed inset-0 z-50 pointer-events-none">
+      {/* Overlay - No bloquea el scroll */}
+      <div className="fixed inset-0 z-40 pointer-events-none">
         {targetRect ? (
-          <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+          <svg className="absolute inset-0 w-full h-full">
             <defs>
               <mask id="hole-mask">
                 <rect width="100%" height="100%" fill="white" />
@@ -163,13 +175,7 @@ export const DriverTour = ({ onComplete }) => {
                 />
               </mask>
             </defs>
-            <rect
-              width="100%"
-              height="100%"
-              fill="black"
-              fillOpacity="0.7"
-              mask="url(#hole-mask)"
-            />
+            <rect width="100%" height="100%" fill="black" fillOpacity="0.7" mask="url(#hole-mask)" />
             <rect
               x={targetRect.left - 4}
               y={targetRect.top - 4}
@@ -187,17 +193,29 @@ export const DriverTour = ({ onComplete }) => {
         )}
       </div>
 
-      {/* Tooltip flotante - Permite interacción */}
+      {/* Flecha apuntadora (solo cuando hay target) */}
+      {targetRect && !isMobile && (
+        <div 
+          className="fixed z-45 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[14px] border-l-transparent border-r-transparent border-t-white"
+          style={{
+            top: targetRect.bottom + 5,
+            left: targetRect.left + targetRect.width / 2 - 10
+          }}
+        />
+      )}
+
+      {/* Tooltip flotante */}
       <div 
-        className={`fixed z-50 bg-white rounded-2xl shadow-2xl transition-all ${
+        ref={tooltipRef}
+        className={`fixed z-45 bg-white rounded-2xl shadow-2xl transition-all ${
           isMobile ? 'w-[calc(100%-32px)] max-w-sm' : 'w-80 md:w-96'
         }`}
         style={{
-          top: tooltipPosition.top,
-          left: tooltipPosition.left,
-          transform: tooltipPosition.transform,
-          maxHeight: '80vh',
-          overflow: 'auto'
+          ...tooltipPosition,
+          maxHeight: isMobile ? '60vh' : '80vh',
+          overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {/* Progress bar */}
@@ -209,83 +227,52 @@ export const DriverTour = ({ onComplete }) => {
         </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-100 sticky top-1.5 bg-white">
+        <div className="flex justify-between items-center p-3 border-b border-gray-100 sticky top-1.5 bg-white">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-indigo-500" />
             <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
-              Paso {currentStep + 1} de {steps.length}
+              {currentStep + 1} / {steps.length}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleSkip}
-              className="text-xs text-gray-400 hover:text-gray-600 transition px-2 py-1 rounded-lg hover:bg-gray-100"
-            >
-              Omitir
-            </button>
-            <button 
-              onClick={handleSkip} 
-              className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <button 
+            onClick={handleSkip}
+            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg"
+          >
+            Omitir tour
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-5">
-          <div className="text-center mb-3">
-            <span className="text-4xl sm:text-5xl block mb-2">{step.title.split(' ')[0]}</span>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{step.title}</h3>
-            <p className="text-sm text-gray-600">{step.description}</p>
+        <div className="p-4 flex-1">
+          <div className="text-center mb-4">
+            <span className="text-5xl block mb-3">{step.title.split(' ')[0]}</span>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{step.title}</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">{step.description}</p>
           </div>
 
-          {/* Demo visual del chat */}
+          {/* Demo visual */}
           {step.id === 'participantes-chat' && (
             <div className="mt-3 p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-200">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white text-xs font-bold">
-                  U
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-pink-600">Usuario Ejemplo</p>
-                </div>
-                <div className="flex gap-1">
-                  <span className="text-sm">👍</span>
-                  <span className="text-sm">❤️</span>
-                </div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white text-xs font-bold">U</div>
+                <div className="flex-1"><p className="text-xs font-semibold text-pink-600">Usuario Ejemplo</p></div>
+                <div className="flex gap-1"><span className="text-sm">👍</span><span className="text-sm">❤️</span></div>
               </div>
               <p className="text-sm text-gray-700 ml-10">¡Qué emoción el partido! ⚽</p>
             </div>
           )}
 
-          {/* Demo de puntuación */}
-          {step.id === 'mi-puntuacion' && (
-            <div className="mt-3 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-gray-500">Tus puntos</p>
-                  <p className="text-xl font-bold text-yellow-600">125 pts</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Posición</p>
-                  <p className="text-xl font-bold text-indigo-600">#3</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Indicadores de progreso - clickeables */}
-          <div className="flex justify-center gap-1.5 mt-4">
+          {/* Indicadores de progreso */}
+          <div className="flex justify-center gap-2 mt-5">
             {steps.map((_, idx) => (
               <button
                 key={idx}
-                className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                className={`h-2 rounded-full transition-all cursor-pointer ${
                   idx === currentStep 
-                    ? 'w-6 bg-indigo-600' 
+                    ? 'w-8 bg-indigo-600' 
                     : idx < currentStep 
-                      ? 'w-1.5 bg-indigo-300' 
-                      : 'w-1.5 bg-gray-300'
+                      ? 'w-2 bg-indigo-300' 
+                      : 'w-2 bg-gray-300'
                 }`}
                 onClick={() => setCurrentStep(idx)}
               />
@@ -293,51 +280,41 @@ export const DriverTour = ({ onComplete }) => {
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-3 p-3 sm:p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+        {/* Botones de navegación - Siempre visibles y grandes para móvil */}
+        <div className="flex gap-3 p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
           {currentStep > 0 && (
             <button
               onClick={handlePrev}
-              className="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition flex items-center justify-center gap-1 sm:gap-2"
+              className="flex-1 py-3 sm:py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-2 active:bg-gray-200"
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Anterior</span>
+              <ChevronLeft className="h-5 w-5" />
+              <span>Anterior</span>
             </button>
           )}
           <button
             onClick={handleNext}
-            className={`flex-1 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-white font-medium transition flex items-center justify-center gap-1 sm:gap-2 ${
+            className={`flex-1 py-3 sm:py-2.5 rounded-xl text-white font-semibold transition flex items-center justify-center gap-2 ${
               isLastStep
-                ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90'
-                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90 active:opacity-80'
+                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 active:opacity-80'
             }`}
           >
-            {isLastStep ? (
-              <>
-                <Check className="h-4 w-4" />
-                Comenzar
-              </>
-            ) : (
-              <>
-                Siguiente
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
+            <span>{isLastStep ? 'Comenzar' : 'Siguiente'}</span>
+            {!isLastStep && <ChevronRight className="h-5 w-5" />}
+            {isLastStep && <Check className="h-5 w-5" />}
           </button>
         </div>
+        
+        {/* Skip button adicional para móvil */}
+        {isMobile && (
+          <button
+            onClick={handleSkip}
+            className="py-2 text-center text-xs text-gray-400 hover:text-gray-600 border-t border-gray-100 mt-1"
+          >
+            Saltar el tour
+          </button>
+        )}
       </div>
-
-      {/* Flecha apuntadora - solo desktop */}
-      {targetRect && !isMobile && (
-        <div 
-          className="fixed z-50 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[14px] border-l-transparent border-r-transparent border-t-white animate-pulse"
-          style={{
-            top: targetRect.bottom + 8,
-            left: targetRect.left + targetRect.width / 2 - 10,
-            transform: 'rotate(0deg)'
-          }}
-        />
-      )}
     </>
   );
 };
