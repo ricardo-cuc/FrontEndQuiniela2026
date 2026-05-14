@@ -388,51 +388,54 @@ const HomePage = () => {
 
         {/* Tarjeta de Mis Predicciones */}
         <div
+          id="mis-predicciones-link"
           onClick={handleMisPrediccionesClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-blue-50 group relative"
         >
           <CheckCircle className="h-8 w-8 text-blue-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mis Predicciones</h3>
           <p className="text-3xl font-bold text-blue-600">{stats.misPredicciones}</p>
-          <p className="text-sm text-gray-400 mt-2">Realizadas</p>
+          <p className="text-sm text-gray-400 mt-2">Pronósticos realizados</p>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-            <InfoTooltip message="Total de pronósticos que has realizado" position="left" />
+            <InfoTooltip message="Historial de todos tus pronósticos y puntos obtenidos" position="left" />
           </div>
         </div>
 
         {/* Tarjeta de Mis Aciertos */}
         <div
+          id="mis-aciertos-link"
           onClick={handleMisAciertosClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-green-50 group relative"
         >
           <Star className="h-8 w-8 text-green-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mis Aciertos</h3>
           <p className="text-3xl font-bold text-green-600">{stats.totalAciertos}</p>
-          <p className="text-sm text-gray-400 mt-2">En todas las quinielas</p>
+          <p className="text-sm text-gray-400 mt-2">Resultados correctos</p>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-            <InfoTooltip message="Veces que acertaste el resultado exacto" position="left" />
+            <InfoTooltip message="Partidos que acertaste correctamente" position="left" />
           </div>
         </div>
 
         {/* Tarjeta de Mi Puntuación */}
         <div
+          id="mi-puntuacion-link"
           onClick={handleMiPuntuacionClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-yellow-50 group relative"
         >
           <Award className="h-8 w-8 text-yellow-500 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Mi Puntuación</h3>
           <p className="text-3xl font-bold text-indigo-600">{stats.miPuntuacion} pts</p>
-          <p className="text-sm text-gray-400 mt-2">Acumulados</p>
+          <p className="text-sm text-gray-400 mt-2">Puntos totales</p>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-            <InfoTooltip message="Puntos totales acumulados en todas tus quinielas" position="left" />
+            <InfoTooltip message="Total de puntos acumulados en todas tus quinielas" position="left" />
           </div>
         </div>
 
         {/* Tarjeta de Participantes */}
         <div
+          id="participantes-link"
           onClick={handleParticipantesClick}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-indigo-50 group relative"
-          id="participantes-link"
         >
           <div className="relative inline-block">
             <Users className="h-8 w-8 text-indigo-600 mb-2 group-hover:scale-110 transition" />
@@ -451,22 +454,22 @@ const HomePage = () => {
             </p>
           )}
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-            <InfoTooltip message="Ver participantes y enviar reacciones" position="left" />
+            <InfoTooltip message="Chat en vivo y reacciones con emojis" position="left" />
           </div>
         </div>
 
         {/* Tarjeta de Ranking */}
         <div
+          id="ranking-link"
           onClick={() => navigate('/ranking/15')}
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer hover:bg-purple-50 group relative"
-          id="ranking-link"
         >
           <Trophy className="h-8 w-8 text-purple-600 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-lg font-semibold text-gray-700">Ranking</h3>
           <p className="text-3xl font-bold text-purple-600">#1</p>
           <p className="text-sm text-gray-400 mt-2">Tu posición</p>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-            <InfoTooltip message="Ver el ranking de esta quiniela" position="left" />
+            <InfoTooltip message="Clasificación general de la quiniela" position="left" />
           </div>
         </div>
       </div>
