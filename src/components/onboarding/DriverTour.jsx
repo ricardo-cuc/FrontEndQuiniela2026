@@ -13,28 +13,54 @@ const steps = [
   {
     id: 'mis-quinielas',
     title: '📋 Mis Quinielas',
-    description: 'Aquí están todas las quinielas en las que participas.',
+    description: 'Aquí están todas las quinielas en las que participas. Cada quiniela tiene sus propios partidos, reglas y ranking.',
     target: 'mis-quinielas-link',
     position: 'bottom'
+  },
+  {
+    id: 'mis-predicciones',
+    title: '📝 Mis Predicciones',
+    description: 'Aquí puedes ver todos los pronósticos que has realizado en cada quiniela. También ves cuántos puntos te dio cada predicción.',
+    target: 'mis-predicciones-link',
+    position: 'bottom',
+    extraInfo: '💡 Puedes ver el historial completo de tus pronósticos y cuántos puntos te dio cada uno.'
+  },
+  {
+    id: 'mis-aciertos',
+    title: '🎯 Mis Aciertos',
+    description: 'Muestra todos los partidos que acertaste correctamente. ¡Cada acierto suma puntos para tu ranking!',
+    target: 'mis-aciertos-link',
+    position: 'bottom',
+    extraInfo: '💡 Acierta el resultado exacto (goles locales y visitantes) para ganar más puntos.'
+  },
+  {
+    id: 'mi-puntuacion',
+    title: '⭐ Mi Puntuación',
+    description: 'Total de puntos acumulados en todas las quinielas. ¡Entre más puntos tengas, mejor posición en el ranking!',
+    target: 'mi-puntuacion-link',
+    position: 'bottom',
+    extraInfo: '💡 Los puntos se calculan según tus aciertos. Cada quiniela puede tener su propio sistema de puntuación.'
   },
   {
     id: 'participantes-chat',
     title: '💬 Participantes y Chat',
     description: '¡Nueva función! Aquí puedes ver quién más participa, enviar mensajes y reaccionar con emojis.',
     target: 'participantes-link',
-    position: 'bottom'
+    position: 'bottom',
+    extraInfo: '💡 Puedes reaccionar con 👍, ❤️, 😂, 🎉, ⚽, 🏆 y más. Los mensajes son en tiempo real.'
   },
   {
     id: 'ranking',
     title: '🏆 Ranking',
-    description: 'Puedes ver tu posición en cada quiniela y competir con otros usuarios.',
+    description: 'Puedes ver tu posición en cada quiniela y competir con otros usuarios. ¡Sube posiciones con cada acierto!',
     target: 'ranking-link',
-    position: 'bottom'
+    position: 'bottom',
+    extraInfo: '💡 Mientras más puntos acumules, más subes en el ranking.'
   },
   {
     id: 'completado',
     title: '🎉 ¡Listo para comenzar!',
-    description: 'Ya conoces las principales funciones. ¡Buena suerte!',
+    description: 'Ya conoces todas las funciones principales. ¡Empieza a disfrutar y demuestra quién es el mejor pronosticador!',
     target: null,
     position: 'center'
   }
@@ -87,20 +113,15 @@ export const DriverTour = ({ onComplete }) => {
           let newPosition = {};
           
           if (isMobile) {
-            // En móvil, el tooltip va debajo del elemento
             newPosition = {
               top: rect.bottom + scrollTop + 15,
               left: scrollLeft + window.innerWidth / 2,
               transform: 'translateX(-50%)'
             };
           } else {
-            // En desktop, calcular posición según el lado disponible
             const spaceBelow = window.innerHeight - rect.bottom;
             const spaceAbove = rect.top;
-            const spaceRight = window.innerWidth - rect.right;
-            const spaceLeft = rect.left;
             
-            // Elegir la mejor posición
             if (spaceBelow > 300) {
               newPosition = {
                 top: rect.bottom + scrollTop + 15,
@@ -113,12 +134,6 @@ export const DriverTour = ({ onComplete }) => {
                 left: rect.left + scrollLeft + rect.width / 2,
                 transform: 'translateX(-50%) translateY(-100%)'
               };
-            } else if (spaceRight > 300) {
-              newPosition = {
-                top: rect.top + scrollTop + rect.height / 2,
-                left: rect.right + scrollLeft + 15,
-                transform: 'translateY(-50%)'
-              };
             } else {
               newPosition = {
                 top: rect.bottom + scrollTop + 15,
@@ -129,11 +144,10 @@ export const DriverTour = ({ onComplete }) => {
           }
           
           setTooltipPosition(newPosition);
-          
-          // Scroll suave al elemento
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
           setTargetRect(null);
+          setTooltipPosition({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
         }
       } else {
         setTargetRect(null);
@@ -214,7 +228,6 @@ export const DriverTour = ({ onComplete }) => {
               mask="url(#hole-mask)"
               onClick={handleSkip}
             />
-            {/* Borde de resaltado */}
             <rect
               x={targetRect.left - 4}
               y={targetRect.top - 4}
@@ -235,7 +248,7 @@ export const DriverTour = ({ onComplete }) => {
         )}
       </div>
 
-      {/* Tooltip flotante - Ahora responsivo */}
+      {/* Tooltip flotante */}
       <div 
         className={`fixed z-50 bg-white rounded-2xl shadow-2xl transition-all duration-300 ${
           isAnimating ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
@@ -288,6 +301,13 @@ export const DriverTour = ({ onComplete }) => {
             <p className="text-gray-600 text-sm leading-relaxed">{step.description}</p>
           </div>
 
+          {/* Información adicional */}
+          {step.extraInfo && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200">
+              <p className="text-xs text-amber-700">{step.extraInfo}</p>
+            </div>
+          )}
+
           {/* Demo visual del chat */}
           {step.id === 'participantes-chat' && (
             <div className="mt-4 p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-200">
@@ -305,6 +325,22 @@ export const DriverTour = ({ onComplete }) => {
                 </div>
               </div>
               <p className="text-sm text-gray-700 ml-10">¡Qué emoción el partido de hoy! ⚽</p>
+            </div>
+          )}
+
+          {/* Demo de puntuación */}
+          {step.id === 'mi-puntuacion' && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500">Tus puntos totales</p>
+                  <p className="text-2xl font-bold text-yellow-600">125 pts</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Posición en ranking</p>
+                  <p className="text-2xl font-bold text-indigo-600">#3</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
