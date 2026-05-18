@@ -94,7 +94,7 @@ export const FloatingHelpWidget = () => {
 
                 <button
                   onClick={() => {
-                    window.open('https://wa.me/123456789?text=Necesito ayuda con Quiniela Lucalza', '_blank');
+                    window.open('https://wa.me/+50230339566?text=Necesito ayuda con Quiniela Lucalza', '_blank');
                   }}
                   className="w-full text-left p-3 rounded-xl hover:bg-green-50 transition flex items-center justify-between group"
                 >
