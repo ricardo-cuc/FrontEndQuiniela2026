@@ -1,6 +1,6 @@
 // components/participantes/ModalParticipantes.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff, ArrowLeft, MessageCircle } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -75,11 +75,25 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [page, setPage] = useState(1);
   const [usuarioActual, setUsuarioActual] = useState(null);
   
+  // Estado para vista móvil: 'participantes' o 'chat'
+  const [mobileView, setMobileView] = useState('participantes');
+  
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const recentEmojis = getRecentEmojis();
+
+  // Detectar si es móvil
+  const isMobile = () => window.innerWidth < 768;
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Obtener usuario actual
   useEffect(() => {
@@ -122,7 +136,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
 
   // Mostrar notificación de reacción
   const mostrarNotificacionReaccion = (reaccion) => {
-    // Solo mostrar notificación si el receptor es el usuario actual
     if (reaccion.receptorId === usuarioActual) {
       toast.success(`💬 ${reaccion.emisorNombre || 'Alguien'} te envió ${reaccion.emoji}`, {
         duration: 3000,
@@ -155,7 +168,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           setIsConnected(false);
         });
 
-        // Escuchar nuevos mensajes
         socketRef.current.on('nuevo-mensaje-chat', (nuevoMensaje) => {
           console.log('📢 Nuevo mensaje recibido:', nuevoMensaje);
           setMensajes(prev => [...prev, nuevoMensaje]);
@@ -167,7 +179,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           }
         });
 
-        // Escuchar evento de escritura
         socketRef.current.on('usuario-escribiendo', ({ usuario, estaEscribiendo }) => {
           setTypingUsers(prev => ({
             ...prev,
@@ -178,11 +189,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           }, 2000);
         });
 
-        // ✅ Escuchar nuevas reacciones (MEJORADO)
         socketRef.current.on('nueva-reaccion', (reaccion) => {
           console.log('😊 NUEVA REACCIÓN RECIBIDA EN TIEMPO REAL:', reaccion);
           
-          // Actualizar el participante que recibió la reacción
           setParticipantes(prev => prev.map(p => 
             p.U_CODIGO === reaccion.receptorId
               ? { 
@@ -197,7 +206,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               : p
           ));
           
-          // ✅ Mostrar notificación al receptor
           mostrarNotificacionReaccion(reaccion);
         });
       } else {
@@ -216,7 +224,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   }, [isOpen, quinielaId]);
 
-  // Manejar evento de escritura
   const handleTyping = () => {
     if (!isTyping && socketRef.current) {
       setIsTyping(true);
@@ -239,7 +246,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }, 1000);
   };
 
-  // Cargar datos iniciales
   const cargarDatos = async () => {
     try {
       setLoading(true);
@@ -267,7 +273,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Cargar más mensajes (infinite scroll)
   const cargarMasMensajes = async () => {
     if (loadingMore || !hasMoreMessages) return;
     
@@ -292,7 +297,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Enviar mensaje
   const enviarMensaje = async () => {
     if (!nuevoMensaje.trim()) return;
     
@@ -321,7 +325,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Enviar reacción
   const enviarReaccion = async (receptorId, emoji) => {
     try {
       const response = await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
@@ -331,11 +334,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       saveRecentEmoji(emoji);
       
-      // Mostrar confirmación local
       toast.success(`Reacción ${emoji.emoji} enviada`);
       setShowEmojis(null);
       
-      // El servidor emitirá el evento a todos los conectados
       console.log('✅ Reacción enviada al servidor');
       
     } catch (error) {
@@ -344,14 +345,12 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Scroll al detectar nuevos mensajes
   useEffect(() => {
     if (autoScroll && !loading) {
       scrollToBottom();
     }
   }, [mensajes.length, autoScroll, loading]);
 
-  // Detectar foco del chat
   useEffect(() => {
     const handleFocus = () => {
       setIsChatFocused(true);
@@ -370,7 +369,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   }, []);
 
-  // Agrupar emojis por categoría
   const emojisPorCategoria = emojisDisponibles.reduce((acc, emoji) => {
     if (!acc[emoji.categoria]) acc[emoji.categoria] = [];
     acc[emoji.categoria].push(emoji);
@@ -380,283 +378,409 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto md:max-h-[90vh] md:max-w-4xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-          <div>
-            <h2 className="text-xl font-bold">Participantes</h2>
-            <p className="text-sm text-indigo-200">{quinielaNombre}</p>
-          </div>
+        <div className="flex justify-between items-center p-4 md:p-5 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setSearchTerm(searchTerm ? '' : 'buscar')}
-              className="md:hidden text-white/70 hover:text-white"
-            >
-              <Search className="h-5 w-5" />
-            </button>
+            {/* Botón volver en móvil */}
+            {mobile && mobileView === 'chat' && (
+              <button 
+                onClick={() => setMobileView('participantes')}
+                className="text-white/70 hover:text-white"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-lg md:text-xl font-bold">
+                {mobile && mobileView === 'chat' ? 'Chat' : 'Participantes'}
+              </h2>
+              {!mobile && <p className="text-sm text-indigo-200">{quinielaNombre}</p>}
+              {mobile && mobileView === 'participantes' && (
+                <p className="text-xs text-indigo-200">{quinielaNombre}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Botón cambiar vista en móvil */}
+            {mobile && mobileView === 'participantes' && (
+              <button
+                onClick={() => setMobileView('chat')}
+                className="relative text-white/70 hover:text-white"
+              >
+                <MessageCircle className="h-5 w-5" />
+                {newMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {newMessagesCount}
+                  </span>
+                )}
+              </button>
+            )}
             <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
               {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               <span className="hidden sm:inline">{isConnected ? 'Conectado' : 'Desconectado'}</span>
             </div>
             <button onClick={onClose} className="text-white/70 hover:text-white">
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 md:h-6 md:w-6" />
             </button>
           </div>
         </div>
 
-        {/* Barra de búsqueda */}
-        <div className="hidden md:block p-3 border-b border-gray-200 bg-gray-50">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar participantes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        {/* Contenido */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Lista de participantes */}
-          <div className="w-1/2 border-r border-gray-200 flex flex-col">
-            <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-700">
-                Participantes ({participantesFiltrados.length})
-                {searchTerm && participantesFiltrados.length !== participantes.length && (
-                  <span className="text-xs text-gray-400 ml-2">
-                    ({participantes.length} total)
-                  </span>
-                )}
-              </h3>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
-                </div>
-              ) : participantesFiltrados.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {searchTerm ? 'No se encontraron participantes' : 'No hay participantes'}
-                </div>
-              ) : (
-                participantesFiltrados.map((p) => (
-                  <div key={p.U_CODIGO} className="bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md transition group">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                          {p.U_NOMBRE?.charAt(0)}{p.U_APELLIDO?.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {p.U_NOMBRE} {p.U_APELLIDO}
-                          </p>
-                          <p className="text-xs text-gray-400">{p.U_CORREO}</p>
-                          {p.puntuacion_total > 0 && (
-                            <p className="text-xs text-yellow-600">⭐ {p.puntuacion_total} pts</p>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
-                          className="p-2 rounded-full hover:bg-gray-100 transition"
-                        >
-                          <Smile className="h-5 w-5 text-gray-400 hover:text-yellow-500" />
-                        </button>
-                        
-                        {showEmojis === p.U_CODIGO && (
-                          <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-10 w-80">
-                            {recentEmojis.length > 0 && showRecentEmojis && (
-                              <div className="mb-3">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs text-gray-500">🕐 Recientes</span>
-                                  <button 
-                                    onClick={() => setShowRecentEmojis(false)}
-                                    className="text-xs text-gray-400 hover:text-gray-600"
-                                  >
-                                    Ocultar
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-8 gap-1">
-                                  {recentEmojis.map((emoji) => (
-                                    <button
-                                      key={emoji.id}
-                                      onClick={() => enviarReaccion(p.U_CODIGO, emoji)}
-                                      className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition hover:scale-110"
-                                      title={emoji.nombre}
-                                    >
-                                      {emoji.emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                                <div className="border-t border-gray-100 my-2"></div>
-                              </div>
-                            )}
-                            <div className="max-h-64 overflow-y-auto">
-                              {Object.entries(emojisPorCategoria).map(([categoria, emojis]) => (
-                                <div key={categoria} className="mb-3">
-                                  <span className="text-xs text-gray-500 capitalize">{categoria}</span>
-                                  <div className="grid grid-cols-4 gap-1 mt-1">
-                                    {emojis.map((emoji) => (
-                                      <button
-                                        key={emoji.id}
-                                        onClick={() => enviarReaccion(p.U_CODIGO, emoji)}
-                                        className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition hover:scale-110"
-                                        title={emoji.nombre}
-                                      >
-                                        {emoji.emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {!showRecentEmojis && (
-                              <button 
-                                onClick={() => setShowRecentEmojis(true)}
-                                className="mt-2 text-xs text-indigo-500 hover:text-indigo-700"
-                              >
-                                Mostrar recientes
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {p.reacciones?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {p.reacciones.slice(-5).map((r, idx) => (
-                          <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5" title={`De: ${r.de}`}>
-                            {r.emoji}
-                          </span>
-                        ))}
-                        {p.reacciones.length > 5 && (
-                          <span className="text-xs text-gray-400">+{p.reacciones.length - 5}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Chat */}
-          <div className="w-1/2 flex flex-col">
-            <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-700">💬 Chat en vivo</h3>
-              <button 
-                onClick={() => setAutoScroll(!autoScroll)}
-                className={`p-1 rounded ${autoScroll ? 'text-indigo-600' : 'text-gray-400'}`}
-                title={autoScroll ? 'Auto-scroll activado' : 'Auto-scroll desactivado'}
-              >
-                {autoScroll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              </button>
-            </div>
-            
-            <div 
-              ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-3"
-              style={{ display: 'flex', flexDirection: 'column' }}
-              onScroll={handleScroll}
-              tabIndex={0}
-            >
-              {hasMoreMessages && !loading && (
-                <div className="text-center">
-                  <button
-                    onClick={cargarMasMensajes}
-                    disabled={loadingMore}
-                    className="text-xs text-indigo-500 hover:text-indigo-700 py-1"
-                  >
-                    {loadingMore ? (
-                      <Loader2 className="h-4 w-4 animate-spin inline" />
-                    ) : (
-                      'Cargar mensajes anteriores ↑'
-                    )}
-                  </button>
-                </div>
-              )}
+        {/* Contenido - Responsive */}
+        <div className="flex-1 overflow-hidden">
+          {!mobile ? (
+            // Vista desktop: dos columnas
+            <div className="flex h-full">
+              {/* Lista de participantes */}
+              <ParticipantesList
+                participantes={participantes}
+                participantesFiltrados={participantesFiltrados}
+                loading={loading}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                showEmojis={showEmojis}
+                setShowEmojis={setShowEmojis}
+                enviarReaccion={enviarReaccion}
+                recentEmojis={recentEmojis}
+                showRecentEmojis={showRecentEmojis}
+                setShowRecentEmojis={setShowRecentEmojis}
+                emojisPorCategoria={emojisPorCategoria}
+              />
               
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
-                </div>
-              ) : mensajes.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">
-                  No hay mensajes aún. ¡Sé el primero en saludar!
-                </div>
-              ) : (
-                mensajes.map((msg, idx) => (
-                  <div key={msg.ID_MENSAJE || idx} className="bg-gray-100 rounded-xl px-4 py-2">
-                    <p className="text-xs font-semibold text-indigo-600">
-                      {msg.U_NOMBRE} {msg.U_APELLIDO}
-                    </p>
-                    <p className="text-sm text-gray-700">{msg.MENSAJE}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                ))
-              )}
-              
-              {Object.values(typingUsers).some(v => v) && (
-                <div className="text-xs text-gray-400 italic">
-                  {Object.entries(typingUsers)
-                    .filter(([, typing]) => typing)
-                    .map(([usuario]) => usuario)
-                    .join(', ')} está escribiendo...
-                </div>
-              )}
-              
-              {newMessagesCount > 0 && !autoScroll && (
-                <button
-                  onClick={() => {
-                    scrollToBottom();
-                    setNewMessagesCount(0);
-                  }}
-                  className="sticky bottom-0 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-lg hover:bg-indigo-700 transition flex items-center gap-1"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                  {newMessagesCount} mensaje(s) nuevo(s)
-                </button>
-              )}
-              
-              <div ref={messagesEndRef} />
+              {/* Chat */}
+              <ChatSection
+                mensajes={mensajes}
+                loading={loading}
+                nuevoMensaje={nuevoMensaje}
+                setNuevoMensaje={setNuevoMensaje}
+                enviarMensaje={enviarMensaje}
+                enviando={enviando}
+                typingUsers={typingUsers}
+                autoScroll={autoScroll}
+                setAutoScroll={setAutoScroll}
+                newMessagesCount={newMessagesCount}
+                hasMoreMessages={hasMoreMessages}
+                loadingMore={loadingMore}
+                cargarMasMensajes={cargarMasMensajes}
+                handleTyping={handleTyping}
+                handleScroll={handleScroll}
+                messagesContainerRef={messagesContainerRef}
+                messagesEndRef={messagesEndRef}
+                scrollToBottom={scrollToBottom}
+                setNewMessagesCount={setNewMessagesCount}
+              />
             </div>
-
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={nuevoMensaje}
-                  onChange={(e) => {
-                    setNuevoMensaje(e.target.value);
-                    handleTyping();
-                  }}
-                  onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()}
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          ) : (
+            // Vista móvil: una columna con toggle
+            <div className="h-full">
+              {mobileView === 'participantes' ? (
+                <ParticipantesList
+                  participantes={participantes}
+                  participantesFiltrados={participantesFiltrados}
+                  loading={loading}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  showEmojis={showEmojis}
+                  setShowEmojis={setShowEmojis}
+                  enviarReaccion={enviarReaccion}
+                  recentEmojis={recentEmojis}
+                  showRecentEmojis={showRecentEmojis}
+                  setShowRecentEmojis={setShowRecentEmojis}
+                  emojisPorCategoria={emojisPorCategoria}
+                  isMobile={true}
                 />
-                <button
-                  onClick={enviarMensaje}
-                  disabled={!nuevoMensaje.trim() || enviando}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                💡 Sé respetuoso. Los mensajes son visibles para todos.
-              </p>
+              ) : (
+                <ChatSection
+                  mensajes={mensajes}
+                  loading={loading}
+                  nuevoMensaje={nuevoMensaje}
+                  setNuevoMensaje={setNuevoMensaje}
+                  enviarMensaje={enviarMensaje}
+                  enviando={enviando}
+                  typingUsers={typingUsers}
+                  autoScroll={autoScroll}
+                  setAutoScroll={setAutoScroll}
+                  newMessagesCount={newMessagesCount}
+                  hasMoreMessages={hasMoreMessages}
+                  loadingMore={loadingMore}
+                  cargarMasMensajes={cargarMasMensajes}
+                  handleTyping={handleTyping}
+                  handleScroll={handleScroll}
+                  messagesContainerRef={messagesContainerRef}
+                  messagesEndRef={messagesEndRef}
+                  scrollToBottom={scrollToBottom}
+                  setNewMessagesCount={setNewMessagesCount}
+                  isMobile={true}
+                />
+              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
+
+// Componente de lista de participantes (reutilizable)
+const ParticipantesList = ({ 
+  participantes, participantesFiltrados, loading, searchTerm, setSearchTerm,
+  showEmojis, setShowEmojis, enviarReaccion, recentEmojis, showRecentEmojis,
+  setShowRecentEmojis, emojisPorCategoria, isMobile = false
+}) => (
+  <div className={`${!isMobile ? 'w-1/2' : 'w-full'} border-r border-gray-200 flex flex-col h-full`}>
+    {/* Barra de búsqueda */}
+    <div className="p-3 border-b border-gray-200 bg-gray-50">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar participantes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+        />
+      </div>
+    </div>
+    
+    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
+        </div>
+      ) : participantesFiltrados.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          {searchTerm ? 'No se encontraron participantes' : 'No hay participantes'}
+        </div>
+      ) : (
+        participantesFiltrados.map((p) => (
+          <div key={p.U_CODIGO} className="bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md transition group">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                  {p.U_NOMBRE?.charAt(0)}{p.U_APELLIDO?.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 text-sm md:text-base truncate">
+                    {p.U_NOMBRE} {p.U_APELLIDO}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate hidden sm:block">{p.U_CORREO}</p>
+                  {p.puntuacion_total > 0 && (
+                    <p className="text-xs text-yellow-600">⭐ {p.puntuacion_total} pts</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
+                  className="p-2 rounded-full hover:bg-gray-100 transition"
+                >
+                  <Smile className="h-5 w-5 text-gray-400 hover:text-yellow-500" />
+                </button>
+                
+                {showEmojis === p.U_CODIGO && (
+                  <EmojiPicker
+                    recentEmojis={recentEmojis}
+                    showRecentEmojis={showRecentEmojis}
+                    setShowRecentEmojis={setShowRecentEmojis}
+                    emojisPorCategoria={emojisPorCategoria}
+                    onSelectEmoji={(emoji) => enviarReaccion(p.U_CODIGO, emoji)}
+                  />
+                )}
+              </div>
+            </div>
+            {p.reacciones?.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {p.reacciones.slice(-5).map((r, idx) => (
+                  <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5" title={`De: ${r.de}`}>
+                    {r.emoji}
+                  </span>
+                ))}
+                {p.reacciones.length > 5 && (
+                  <span className="text-xs text-gray-400">+{p.reacciones.length - 5}</span>
+                )}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+);
+
+// Componente del chat (reutilizable)
+const ChatSection = ({
+  mensajes, loading, nuevoMensaje, setNuevoMensaje, enviarMensaje, enviando,
+  typingUsers, autoScroll, setAutoScroll, newMessagesCount, hasMoreMessages,
+  loadingMore, cargarMasMensajes, handleTyping, handleScroll, messagesContainerRef,
+  messagesEndRef, scrollToBottom, setNewMessagesCount, isMobile = false
+}) => (
+  <div className={`${!isMobile ? 'w-1/2' : 'w-full'} flex flex-col h-full`}>
+    <div className="p-3 md:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+      <h3 className="font-semibold text-gray-700 text-sm md:text-base">💬 Chat en vivo</h3>
+      <button 
+        onClick={() => setAutoScroll(!autoScroll)}
+        className={`p-1 rounded ${autoScroll ? 'text-indigo-600' : 'text-gray-400'}`}
+        title={autoScroll ? 'Auto-scroll activado' : 'Auto-scroll desactivado'}
+      >
+        {autoScroll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+      </button>
+    </div>
+    
+    <div 
+      ref={messagesContainerRef}
+      className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3"
+      style={{ display: 'flex', flexDirection: 'column' }}
+      onScroll={handleScroll}
+      tabIndex={0}
+    >
+      {hasMoreMessages && !loading && (
+        <div className="text-center">
+          <button
+            onClick={cargarMasMensajes}
+            disabled={loadingMore}
+            className="text-xs text-indigo-500 hover:text-indigo-700 py-1"
+          >
+            {loadingMore ? (
+              <Loader2 className="h-4 w-4 animate-spin inline" />
+            ) : (
+              'Cargar mensajes anteriores ↑'
+            )}
+          </button>
+        </div>
+      )}
+      
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
+        </div>
+      ) : mensajes.length === 0 ? (
+        <div className="text-center py-8 text-gray-400 text-sm">
+          No hay mensajes aún. ¡Sé el primero en saludar!
+        </div>
+      ) : (
+        mensajes.map((msg, idx) => (
+          <div key={msg.ID_MENSAJE || idx} className="bg-gray-100 rounded-xl px-3 md:px-4 py-2 max-w-[85%] md:max-w-full">
+            <p className="text-xs font-semibold text-indigo-600">
+              {msg.U_NOMBRE} {msg.U_APELLIDO}
+            </p>
+            <p className="text-sm text-gray-700 break-words">{msg.MENSAJE}</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        ))
+      )}
+      
+      {Object.values(typingUsers).some(v => v) && (
+        <div className="text-xs text-gray-400 italic">
+          {Object.entries(typingUsers)
+            .filter(([, typing]) => typing)
+            .map(([usuario]) => usuario)
+            .join(', ')} está escribiendo...
+        </div>
+      )}
+      
+      {newMessagesCount > 0 && !autoScroll && (
+        <button
+          onClick={() => {
+            scrollToBottom();
+            setNewMessagesCount(0);
+          }}
+          className="sticky bottom-0 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-lg hover:bg-indigo-700 transition flex items-center gap-1"
+        >
+          <ChevronDown className="h-3 w-3" />
+          {newMessagesCount} mensaje(s) nuevo(s)
+        </button>
+      )}
+      
+      <div ref={messagesEndRef} />
+    </div>
+
+    <div className="p-3 md:p-4 border-t border-gray-200 bg-gray-50">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={nuevoMensaje}
+          onChange={(e) => {
+            setNuevoMensaje(e.target.value);
+            handleTyping();
+          }}
+          onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()}
+          placeholder="Escribe un mensaje..."
+          className="flex-1 px-3 md:px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+        />
+        <button
+          onClick={enviarMensaje}
+          disabled={!nuevoMensaje.trim() || enviando}
+          className="bg-indigo-600 text-white px-3 md:px-4 py-2 rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </div>
+      <p className="text-xs text-gray-400 mt-2 text-center">
+        💡 Sé respetuoso. Los mensajes son visibles para todos.
+      </p>
+    </div>
+  </div>
+);
+
+// Componente selector de emojis
+const EmojiPicker = ({ recentEmojis, showRecentEmojis, setShowRecentEmojis, emojisPorCategoria, onSelectEmoji }) => (
+  <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-10 w-72 md:w-80">
+    {recentEmojis.length > 0 && showRecentEmojis && (
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-xs text-gray-500">🕐 Recientes</span>
+          <button 
+            onClick={() => setShowRecentEmojis(false)}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            Ocultar
+          </button>
+        </div>
+        <div className="grid grid-cols-8 gap-1">
+          {recentEmojis.map((emoji) => (
+            <button
+              key={emoji.id}
+              onClick={() => onSelectEmoji(emoji)}
+              className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition hover:scale-110"
+              title={emoji.nombre}
+            >
+              {emoji.emoji}
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-gray-100 my-2"></div>
+      </div>
+    )}
+    <div className="max-h-64 overflow-y-auto">
+      {Object.entries(emojisPorCategoria).map(([categoria, emojis]) => (
+        <div key={categoria} className="mb-3">
+          <span className="text-xs text-gray-500 capitalize">{categoria}</span>
+          <div className="grid grid-cols-4 gap-1 mt-1">
+            {emojis.map((emoji) => (
+              <button
+                key={emoji.id}
+                onClick={() => onSelectEmoji(emoji)}
+                className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition hover:scale-110"
+                title={emoji.nombre}
+              >
+                {emoji.emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+    {!showRecentEmojis && (
+      <button 
+        onClick={() => setShowRecentEmojis(true)}
+        className="mt-2 text-xs text-indigo-500 hover:text-indigo-700"
+      >
+        Mostrar recientes
+      </button>
+    )}
+  </div>
+);
