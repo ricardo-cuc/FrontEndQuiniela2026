@@ -18,20 +18,20 @@ const emojisDisponibles = [
   { id: '💪', emoji: '💪', nombre: 'Fuerza', categoria: 'apoyo' },
   { id: '🔥', emoji: '🔥', nombre: 'Fuego', categoria: 'reacciones' },
   { id: '👏', emoji: '👏', nombre: 'Aplausos', categoria: 'reacciones' },
-  { id: '🙌', emoji: '🙌', nombre: 'Celebración', categoria: 'reacciones' },
   { id: '💯', emoji: '💯', nombre: 'Perfecto', categoria: 'reacciones' },
-  { id: '😊', emoji: '😊', nombre: 'Sonrisa', categoria: 'reacciones' },
-  { id: '😍', emoji: '😍', nombre: 'Amor', categoria: 'reacciones' },
   { id: '🤔', emoji: '🤔', nombre: 'Pensando', categoria: 'reacciones' },
   { id: '😢', emoji: '😢', nombre: 'Triste', categoria: 'reacciones' },
   { id: '🥅', emoji: '🥅', nombre: 'Arco', categoria: 'deportes' },
-  { id: '🎊', emoji: '🎊', nombre: 'Confeti', categoria: 'celebración' },
-  { id: '✨', emoji: '✨', nombre: 'Brillante', categoria: 'celebración' },
-  { id: '💙', emoji: '💙', nombre: 'Corazón Azul', categoria: 'reacciones' },
-  { id: '🍿', emoji: '🍿', nombre: 'Palomitas', categoria: 'entretenimiento' },
   { id: '🥇', emoji: '🥇', nombre: 'Oro', categoria: 'deportes' },
   { id: '⚡', emoji: '⚡', nombre: 'Rayo', categoria: 'energía' },
-  { id: '🙏', emoji: '🙏', nombre: 'Gracias', categoria: 'social' }
+  { id: '🍺', emoji: '🍺', nombre: 'Cerveza', categoria: 'bebidas' },
+  { id: '🍻', emoji: '🍻', nombre: 'Brindis', categoria: 'bebidas' },
+  { id: '🥂', emoji: '🥂', nombre: 'Copas', categoria: 'bebidas' },
+  { id: '🍷', emoji: '🍷', nombre: 'Vino', categoria: 'bebidas' },
+  { id: '🥃', emoji: '🥃', nombre: 'Whisky', categoria: 'bebidas' },
+  { id: '🍹', emoji: '🍹', nombre: 'Cóctel', categoria: 'bebidas' },
+  { id: '🍾', emoji: '🍾', nombre: 'Champán', categoria: 'bebidas' },
+  { id: '☕', emoji: '☕', nombre: 'Café', categoria: 'bebidas' }
 ];
 
 const getRecentEmojis = () => {
