@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff, MessageCircle, Reply } from 'lucide-react';
+import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff, Reply } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -64,7 +64,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [searchTerm, setSearchTerm] = useState('');
   const [typingUsers, setTypingUsers] = useState({});
   const [isTyping, setIsTyping] = useState(false);
-  const [showRecentEmojis, setShowRecentEmojis] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [isChatFocused, setIsChatFocused] = useState(true);
@@ -75,11 +74,10 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [showParticipantesDrawer, setShowParticipantesDrawer] = useState(false);
   const [screenSize, setScreenSize] = useState('desktop');
   
-  // ✅ NUEVOS ESTADOS PARA REACCIONES Y RESPUESTAS A MENSAJES
+  // Estados para mensajes
   const [mensajeRespondiendo, setMensajeRespondiendo] = useState(null);
   const [showReaccionesMensaje, setShowReaccionesMensaje] = useState(null);
   const [respuestaTexto, setRespuestaTexto] = useState('');
-  const [reaccionesMensajes, setReaccionesMensajes] = useState({});
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -148,34 +146,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  const mostrarNotificacionReaccion = (reaccion) => {
-    if (reaccion.receptorId === usuarioActual) {
-      toast.success(`💬 ${reaccion.emisorNombre || 'Alguien'} reaccionó con ${reaccion.emoji}`, {
-        duration: 3000,
-        icon: reaccion.emoji,
-        style: {
-          background: '#4f46e5',
-          color: '#fff',
-        },
-      });
-    }
-  };
-
-  const actualizarReaccionesLocalmente = (receptorId, emoji, emisorId, emisorNombre) => {
-    setParticipantes(prev => prev.map(p => {
-      if (p.U_CODIGO === receptorId) {
-        const nuevasReacciones = [...(p.reacciones || []), {
-          emoji: emoji,
-          de: emisorId,
-          emisorNombre: emisorNombre,
-          fecha: new Date()
-        }];
-        return { ...p, reacciones: nuevasReacciones };
-      }
-      return p;
-    }));
-  };
-
   useEffect(() => {
     if (isOpen && quinielaId) {
       if (!socketRef.current) {
@@ -214,40 +184,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           setTimeout(() => {
             setTypingUsers(prev => ({ ...prev, [usuario]: false }));
           }, 2000);
-        });
-
-        socketRef.current.on('nueva-reaccion', (reaccion) => {
-          console.log('📢 Nueva reacción recibida:', reaccion);
-          actualizarReaccionesLocalmente(
-            reaccion.receptorId,
-            reaccion.emoji,
-            reaccion.emisorId,
-            reaccion.emisorNombre
-          );
-          mostrarNotificacionReaccion(reaccion);
-        });
-
-        // ✅ Escuchar nuevas reacciones a mensajes
-        socketRef.current.on('nueva-reaccion-mensaje', ({ mensajeId, reaccion }) => {
-          console.log('📢 Nueva reacción a mensaje:', mensajeId, reaccion);
-          setReaccionesMensajes(prev => ({
-            ...prev,
-            [mensajeId]: [...(prev[mensajeId] || []), reaccion]
-          }));
-        });
-
-        // ✅ Escuchar nuevas respuestas a mensajes
-        socketRef.current.on('nueva-respuesta-mensaje', ({ mensajeId, respuesta }) => {
-          console.log('📢 Nueva respuesta a mensaje:', mensajeId, respuesta);
-          setMensajes(prev => prev.map(msg => {
-            if (msg.ID_MENSAJE === mensajeId) {
-              return {
-                ...msg,
-                respuestas: [...(msg.respuestas || []), respuesta]
-              };
-            }
-            return msg;
-          }));
         });
       } else {
         socketRef.current.emit('join-quiniela', quinielaId);
@@ -293,7 +229,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       const [participantesRes, mensajesRes] = await Promise.all([
         api.get(`/api/quinielas/${quinielaId}/participantes`),
-        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&include=reacciones,respuestas`)
+        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50`)
       ]);
       
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
@@ -306,15 +242,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       const mensajesOrdenados = (mensajesRes.data.data || []).reverse();
       setMensajes(mensajesOrdenados);
-      
-      // Cargar reacciones de mensajes
-      const todasReacciones = {};
-      mensajesOrdenados.forEach(msg => {
-        if (msg.reacciones && msg.reacciones.length > 0) {
-          todasReacciones[msg.ID_MENSAJE] = msg.reacciones;
-        }
-      });
-      setReaccionesMensajes(todasReacciones);
       
       setHasMoreMessages(mensajesOrdenados.length >= 50);
       setPage(1);
@@ -336,22 +263,12 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     const nextPage = page + 1;
     
     try {
-      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}&include=reacciones,respuestas`);
+      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}`);
       const nuevosMensajes = (response.data.data || []).reverse();
       
       if (nuevosMensajes.length > 0) {
         const scrollHeightBefore = messagesContainerRef.current?.scrollHeight || 0;
         setMensajes(prev => [...nuevosMensajes, ...prev]);
-        
-        // Actualizar reacciones
-        const nuevasReacciones = {};
-        nuevosMensajes.forEach(msg => {
-          if (msg.reacciones && msg.reacciones.length > 0) {
-            nuevasReacciones[msg.ID_MENSAJE] = msg.reacciones;
-          }
-        });
-        setReaccionesMensajes(prev => ({ ...prev, ...nuevasReacciones }));
-        
         setPage(nextPage);
         setHasMoreMessages(nuevosMensajes.length >= 50);
         
@@ -399,15 +316,12 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  const enviarReaccion = async (receptorId, emoji) => {
+  // Enviar reacción a un participante
+  const enviarReaccionParticipante = async (receptorId, emoji) => {
+    if (showEmojis === 'enviando') return;
+    
     try {
-      const usuarioEmisor = {
-        nombre: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).U_NOMBRE : 'Tú',
-        id: usuarioActual
-      };
-      
-      actualizarReaccionesLocalmente(receptorId, emoji.emoji, usuarioActual, usuarioEmisor.nombre);
-      setShowEmojis(null);
+      setShowEmojis('enviando');
       
       await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
         usuario_id: receptorId,
@@ -416,71 +330,46 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       saveRecentEmoji(emoji);
       toast.success(`Reacción ${emoji.emoji} enviada`, { duration: 1500 });
+      setShowEmojis(null);
+      
+      // Recargar participantes para mostrar la nueva reacción
+      const participantesRes = await api.get(`/api/quinielas/${quinielaId}/participantes`);
+      const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
+        ...p,
+        reacciones: p.reacciones || []
+      }));
+      setParticipantes(participantesConReacciones);
+      setParticipantesFiltrados(participantesConReacciones);
       
     } catch (error) {
       console.error('Error enviando reacción:', error);
       toast.error(error.response?.data?.message || 'Error al enviar reacción');
-      cargarDatos();
+      setShowEmojis(null);
     }
   };
 
-  // ✅ Enviar reacción a un mensaje específico
+  // Enviar reacción a un mensaje
   const enviarReaccionMensaje = async (mensajeId, emoji) => {
     try {
-      const usuarioActualNombre = localStorage.getItem('user') 
-        ? JSON.parse(localStorage.getItem('user')).U_NOMBRE 
-        : 'Usuario';
-      
-      const nuevaReaccion = {
-        emoji: emoji.emoji,
-        usuarioId: usuarioActual,
-        nombre: usuarioActualNombre,
-        fecha: new Date()
-      };
-      
-      setReaccionesMensajes(prev => ({
-        ...prev,
-        [mensajeId]: [...(prev[mensajeId] || []), nuevaReaccion]
-      }));
-      
-      setShowReaccionesMensaje(null);
-      
       await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeId}/reacciones`, {
         emoji: emoji.emoji
       });
       
       saveRecentEmoji(emoji);
-      toast.success(`Reacción ${emoji.emoji} añadida`, { duration: 1500 });
-      
-      if (socketRef.current) {
-        socketRef.current.emit('reaccion-mensaje', {
-          quinielaId,
-          mensajeId,
-          reaccion: nuevaReaccion
-        });
-      }
+      toast.success(`Reacción ${emoji.emoji} añadida al mensaje`, { duration: 1500 });
+      setShowReaccionesMensaje(null);
       
     } catch (error) {
-      console.error('Error enviando reacción:', error);
+      console.error('Error enviando reacción a mensaje:', error);
       toast.error('Error al enviar reacción');
-      cargarDatos();
     }
   };
 
-  // ✅ Enviar respuesta a un mensaje
+  // Enviar respuesta a un mensaje
   const enviarRespuestaMensaje = async () => {
     if (!respuestaTexto.trim() || !mensajeRespondiendo) return;
     
     try {
-      const respuesta = {
-        mensaje: respuestaTexto,
-        usuarioId: usuarioActual,
-        usuarioNombre: localStorage.getItem('user') 
-          ? JSON.parse(localStorage.getItem('user')).U_NOMBRE 
-          : 'Usuario',
-        fecha: new Date()
-      };
-      
       await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeRespondiendo.ID_MENSAJE}/responder`, {
         mensaje: respuestaTexto
       });
@@ -488,15 +377,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       setRespuestaTexto('');
       setMensajeRespondiendo(null);
       toast.success('Respuesta enviada');
-      
-      if (socketRef.current) {
-        socketRef.current.emit('responder-mensaje', {
-          quinielaId,
-          mensajeId: mensajeRespondiendo.ID_MENSAJE,
-          respuesta
-        });
-      }
-      
       cargarDatos();
       
     } catch (error) {
@@ -505,67 +385,46 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // ✅ Renderizar mensaje con acciones
+  // Renderizar mensaje individual
   const renderMensaje = (msg) => {
-    const reaccionesMsg = reaccionesMensajes[msg.ID_MENSAJE] || [];
-    const reaccionesAgrupadas = reaccionesMsg.reduce((acc, r) => {
-      const emojiKey = r.emoji || r;
-      if (!acc[emojiKey]) acc[emojiKey] = [];
-      acc[emojiKey].push(r);
-      return acc;
-    }, {});
-    
     const esRespondiendo = mensajeRespondiendo?.ID_MENSAJE === msg.ID_MENSAJE;
     
     return (
-      <div key={msg.ID_MENSAJE} className="group relative">
-        <div className="bg-gray-100 rounded-xl px-4 py-2 max-w-[85%] hover:shadow-md transition">
-          <div className="flex items-center justify-between gap-2">
+      <div key={msg.ID_MENSAJE} className="mb-3">
+        <div className="bg-gray-100 rounded-xl px-4 py-2 max-w-[85%]">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs font-semibold text-indigo-600">
               {msg.U_NOMBRE} {msg.U_APELLIDO}
             </p>
             
-            <div className="opacity-0 group-hover:opacity-100 transition flex gap-1">
+            <div className="flex gap-1">
               <button
                 onClick={() => setShowReaccionesMensaje(showReaccionesMensaje === msg.ID_MENSAJE ? null : msg.ID_MENSAJE)}
-                className="p-1 rounded-full hover:bg-gray-200"
-                title="Reaccionar"
+                className="p-1 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                title="Reaccionar a este mensaje"
               >
-                <Smile className="h-3 w-3 text-gray-500" />
+                <Smile className="h-3 w-3 text-gray-600" />
               </button>
               <button
                 onClick={() => setMensajeRespondiendo(msg)}
-                className="p-1 rounded-full hover:bg-gray-200"
-                title="Responder"
+                className="p-1 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                title="Responder a este mensaje"
               >
-                <Reply className="h-3 w-3 text-gray-500" />
+                <Reply className="h-3 w-3 text-gray-600" />
               </button>
             </div>
           </div>
           
-          <p className="text-sm text-gray-700 break-words">{msg.MENSAJE}</p>
+          <p className="text-sm text-gray-700 break-words mt-1">{msg.MENSAJE}</p>
           
           <p className="text-xs text-gray-400 mt-1">
             {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
-          
-          {Object.keys(reaccionesAgrupadas).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {Object.entries(reaccionesAgrupadas).map(([emoji, usuarios]) => (
-                <span 
-                  key={emoji} 
-                  className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm cursor-pointer hover:bg-gray-50"
-                  title={usuarios.map(u => u.nombre || u.usuarioNombre || 'Alguien').join(', ')}
-                >
-                  {emoji} {usuarios.length}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
         
+        {/* Selector de emojis para reaccionar al mensaje */}
         {showReaccionesMensaje === msg.ID_MENSAJE && (
-          <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-20">
+          <div className="mt-1 ml-4 bg-white rounded-lg shadow-xl border border-gray-200 p-2 inline-block">
             <div className="grid grid-cols-6 gap-1">
               {emojisDisponibles.slice(0, 12).map((emoji) => (
                 <button
@@ -581,8 +440,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           </div>
         )}
         
+        {/* Input para responder al mensaje */}
         {esRespondiendo && (
-          <div className="mt-2 ml-4 pl-3 border-l-2 border-indigo-300">
+          <div className="mt-2 ml-8 pl-3 border-l-2 border-indigo-300">
             <div className="bg-indigo-50 rounded-lg p-2">
               <p className="text-xs text-indigo-600 mb-1">
                 Respondiendo a {msg.U_NOMBRE}:
@@ -617,26 +477,11 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
           </div>
         )}
-        
-        {msg.respuestas && msg.respuestas.length > 0 && (
-          <div className="ml-6 mt-2 space-y-2">
-            {msg.respuestas.map((respuesta, idx) => (
-              <div key={idx} className="bg-gray-50 rounded-lg px-3 py-2 max-w-[80%]">
-                <p className="text-xs font-semibold text-indigo-500">
-                  {respuesta.U_NOMBRE || respuesta.usuarioNombre} {respuesta.U_APELLIDO || ''}
-                </p>
-                <p className="text-xs text-gray-600">{respuesta.MENSAJE || respuesta.mensaje}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {new Date(respuesta.FECHA_CREACION || respuesta.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
 
+  // Renderizar lista de participantes
   const renderParticipantesList = () => (
     <div className="space-y-2">
       {loading ? (
@@ -668,6 +513,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 <button
                   onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
                   className="p-1 rounded-full hover:bg-gray-200 transition"
+                  disabled={showEmojis === 'enviando'}
                 >
                   <Smile className="h-4 w-4 text-gray-400" />
                 </button>
@@ -678,10 +524,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                       {emojisDisponibles.map((emoji) => (
                         <button
                           key={emoji.id}
-                          onClick={() => {
-                            enviarReaccion(p.U_CODIGO, emoji);
-                            setShowEmojis(null);
-                          }}
+                          onClick={() => enviarReaccionParticipante(p.U_CODIGO, emoji)}
                           className="p-1 text-xl hover:bg-gray-100 rounded transition"
                           title={emoji.nombre}
                         >
@@ -714,24 +557,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   }, [mensajes.length, autoScroll, loading]);
 
-  useEffect(() => {
-    const handleFocus = () => {
-      setIsChatFocused(true);
-      setNewMessagesCount(0);
-    };
-    const handleBlur = () => setIsChatFocused(false);
-    
-    const chatContainer = messagesContainerRef.current;
-    if (chatContainer) {
-      chatContainer.addEventListener('focus', handleFocus);
-      chatContainer.addEventListener('blur', handleBlur);
-      return () => {
-        chatContainer.removeEventListener('focus', handleFocus);
-        chatContainer.removeEventListener('blur', handleBlur);
-      };
-    }
-  }, []);
-
   if (!isOpen) return null;
 
   return (
@@ -742,7 +567,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         
         <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
           
+          {/* Columna del Chat */}
           <div className={`flex flex-col overflow-hidden ${isDesktop ? 'md:w-3/4' : 'flex-1'}`}>
+            {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
               <div className="flex items-center gap-3">
                 {(isMobile || isTablet) && (
@@ -772,6 +599,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               </div>
             </div>
 
+            {/* Área de mensajes */}
             <div 
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3"
@@ -822,6 +650,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Input de mensaje */}
             <div className="p-4 border-t border-gray-200 bg-gray-50">
               <div className="flex gap-2">
                 <button
@@ -857,6 +686,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
           </div>
 
+          {/* Panel de Participantes Desktop */}
           {isDesktop && (
             <div className="md:w-1/4 bg-white border-l border-gray-200 overflow-hidden flex flex-col">
               <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
@@ -885,6 +715,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         </div>
       </div>
 
+      {/* Drawer de participantes para móvil/tablet */}
       {(isMobile || isTablet) && showParticipantesDrawer && (
         <>
           <div 
