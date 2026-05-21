@@ -1,6 +1,5 @@
-// components/participantes/ModalParticipantes.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff, Menu, UserPlus } from 'lucide-react';
+import { X, Users, Smile, Send, Wifi, WifiOff, Search, Loader2, ChevronDown, Eye, EyeOff, MessageCircle, Reply } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -74,6 +73,13 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [page, setPage] = useState(1);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [showParticipantesDrawer, setShowParticipantesDrawer] = useState(false);
+  const [screenSize, setScreenSize] = useState('desktop');
+  
+  // ✅ NUEVOS ESTADOS PARA REACCIONES Y RESPUESTAS A MENSAJES
+  const [mensajeRespondiendo, setMensajeRespondiendo] = useState(null);
+  const [showReaccionesMensaje, setShowReaccionesMensaje] = useState(null);
+  const [respuestaTexto, setRespuestaTexto] = useState('');
+  const [reaccionesMensajes, setReaccionesMensajes] = useState({});
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -81,15 +87,27 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const typingTimeoutRef = useRef(null);
   const recentEmojis = getRecentEmojis();
 
-  const isMobile = () => window.innerWidth < 768;
-  const [mobile, setMobile] = useState(false);
-
+  // Detectar tamaño de pantalla
   useEffect(() => {
-    const handleResize = () => setMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setScreenSize('mobile');
+      } else if (width < 1024) {
+        setScreenSize('tablet');
+      } else {
+        setScreenSize('desktop');
+      }
+    };
+    
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const isMobile = screenSize === 'mobile';
+  const isTablet = screenSize === 'tablet';
+  const isDesktop = screenSize === 'desktop';
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -118,6 +136,10 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
     setAutoScroll(isNearBottom);
+    
+    if (scrollTop === 0 && hasMoreMessages && !loadingMore) {
+      cargarMasMensajes();
+    }
   };
 
   const scrollToBottom = () => {
@@ -139,7 +161,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // ✅ Función para actualizar reacciones localmente
   const actualizarReaccionesLocalmente = (receptorId, emoji, emisorId, emisorNombre) => {
     setParticipantes(prev => prev.map(p => {
       if (p.U_CODIGO === receptorId) {
@@ -195,7 +216,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           }, 2000);
         });
 
-        // ✅ Escuchar evento de nueva reacción
         socketRef.current.on('nueva-reaccion', (reaccion) => {
           console.log('📢 Nueva reacción recibida:', reaccion);
           actualizarReaccionesLocalmente(
@@ -205,6 +225,29 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             reaccion.emisorNombre
           );
           mostrarNotificacionReaccion(reaccion);
+        });
+
+        // ✅ Escuchar nuevas reacciones a mensajes
+        socketRef.current.on('nueva-reaccion-mensaje', ({ mensajeId, reaccion }) => {
+          console.log('📢 Nueva reacción a mensaje:', mensajeId, reaccion);
+          setReaccionesMensajes(prev => ({
+            ...prev,
+            [mensajeId]: [...(prev[mensajeId] || []), reaccion]
+          }));
+        });
+
+        // ✅ Escuchar nuevas respuestas a mensajes
+        socketRef.current.on('nueva-respuesta-mensaje', ({ mensajeId, respuesta }) => {
+          console.log('📢 Nueva respuesta a mensaje:', mensajeId, respuesta);
+          setMensajes(prev => prev.map(msg => {
+            if (msg.ID_MENSAJE === mensajeId) {
+              return {
+                ...msg,
+                respuestas: [...(msg.respuestas || []), respuesta]
+              };
+            }
+            return msg;
+          }));
         });
       } else {
         socketRef.current.emit('join-quiniela', quinielaId);
@@ -250,10 +293,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       const [participantesRes, mensajesRes] = await Promise.all([
         api.get(`/api/quinielas/${quinielaId}/participantes`),
-        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50`)
+        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&include=reacciones,respuestas`)
       ]);
       
-      // Inicializar reacciones vacías si no existen
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
         ...p,
         reacciones: p.reacciones || []
@@ -264,6 +306,16 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       const mensajesOrdenados = (mensajesRes.data.data || []).reverse();
       setMensajes(mensajesOrdenados);
+      
+      // Cargar reacciones de mensajes
+      const todasReacciones = {};
+      mensajesOrdenados.forEach(msg => {
+        if (msg.reacciones && msg.reacciones.length > 0) {
+          todasReacciones[msg.ID_MENSAJE] = msg.reacciones;
+        }
+      });
+      setReaccionesMensajes(todasReacciones);
+      
       setHasMoreMessages(mensajesOrdenados.length >= 50);
       setPage(1);
       
@@ -284,13 +336,31 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     const nextPage = page + 1;
     
     try {
-      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}`);
+      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}&include=reacciones,respuestas`);
       const nuevosMensajes = (response.data.data || []).reverse();
       
       if (nuevosMensajes.length > 0) {
+        const scrollHeightBefore = messagesContainerRef.current?.scrollHeight || 0;
         setMensajes(prev => [...nuevosMensajes, ...prev]);
+        
+        // Actualizar reacciones
+        const nuevasReacciones = {};
+        nuevosMensajes.forEach(msg => {
+          if (msg.reacciones && msg.reacciones.length > 0) {
+            nuevasReacciones[msg.ID_MENSAJE] = msg.reacciones;
+          }
+        });
+        setReaccionesMensajes(prev => ({ ...prev, ...nuevasReacciones }));
+        
         setPage(nextPage);
         setHasMoreMessages(nuevosMensajes.length >= 50);
+        
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            const newScrollHeight = messagesContainerRef.current.scrollHeight;
+            messagesContainerRef.current.scrollTop = newScrollHeight - scrollHeightBefore;
+          }
+        }, 100);
       } else {
         setHasMoreMessages(false);
       }
@@ -329,21 +399,16 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // ✅ Función mejorada para enviar reacción
   const enviarReaccion = async (receptorId, emoji) => {
     try {
-      // Optimistic update: mostrar inmediatamente la reacción
       const usuarioEmisor = {
         nombre: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).U_NOMBRE : 'Tú',
         id: usuarioActual
       };
       
       actualizarReaccionesLocalmente(receptorId, emoji.emoji, usuarioActual, usuarioEmisor.nombre);
-      
-      // Cerrar el selector de emojis
       setShowEmojis(null);
       
-      // Enviar al backend
       await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
         usuario_id: receptorId,
         emoji: emoji.emoji
@@ -355,10 +420,293 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     } catch (error) {
       console.error('Error enviando reacción:', error);
       toast.error(error.response?.data?.message || 'Error al enviar reacción');
-      // Recargar participantes para corregir el estado optimista si falló
       cargarDatos();
     }
   };
+
+  // ✅ Enviar reacción a un mensaje específico
+  const enviarReaccionMensaje = async (mensajeId, emoji) => {
+    try {
+      const usuarioActualNombre = localStorage.getItem('user') 
+        ? JSON.parse(localStorage.getItem('user')).U_NOMBRE 
+        : 'Usuario';
+      
+      const nuevaReaccion = {
+        emoji: emoji.emoji,
+        usuarioId: usuarioActual,
+        nombre: usuarioActualNombre,
+        fecha: new Date()
+      };
+      
+      setReaccionesMensajes(prev => ({
+        ...prev,
+        [mensajeId]: [...(prev[mensajeId] || []), nuevaReaccion]
+      }));
+      
+      setShowReaccionesMensaje(null);
+      
+      await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeId}/reacciones`, {
+        emoji: emoji.emoji
+      });
+      
+      saveRecentEmoji(emoji);
+      toast.success(`Reacción ${emoji.emoji} añadida`, { duration: 1500 });
+      
+      if (socketRef.current) {
+        socketRef.current.emit('reaccion-mensaje', {
+          quinielaId,
+          mensajeId,
+          reaccion: nuevaReaccion
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error enviando reacción:', error);
+      toast.error('Error al enviar reacción');
+      cargarDatos();
+    }
+  };
+
+  // ✅ Enviar respuesta a un mensaje
+  const enviarRespuestaMensaje = async () => {
+    if (!respuestaTexto.trim() || !mensajeRespondiendo) return;
+    
+    try {
+      const respuesta = {
+        mensaje: respuestaTexto,
+        usuarioId: usuarioActual,
+        usuarioNombre: localStorage.getItem('user') 
+          ? JSON.parse(localStorage.getItem('user')).U_NOMBRE 
+          : 'Usuario',
+        fecha: new Date()
+      };
+      
+      await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeRespondiendo.ID_MENSAJE}/responder`, {
+        mensaje: respuestaTexto
+      });
+      
+      setRespuestaTexto('');
+      setMensajeRespondiendo(null);
+      toast.success('Respuesta enviada');
+      
+      if (socketRef.current) {
+        socketRef.current.emit('responder-mensaje', {
+          quinielaId,
+          mensajeId: mensajeRespondiendo.ID_MENSAJE,
+          respuesta
+        });
+      }
+      
+      cargarDatos();
+      
+    } catch (error) {
+      console.error('Error enviando respuesta:', error);
+      toast.error(error.response?.data?.message || 'Error al enviar respuesta');
+    }
+  };
+
+  // ✅ Renderizar mensaje con acciones
+  const renderMensaje = (msg) => {
+    const reaccionesMsg = reaccionesMensajes[msg.ID_MENSAJE] || [];
+    const reaccionesAgrupadas = reaccionesMsg.reduce((acc, r) => {
+      const emojiKey = r.emoji || r;
+      if (!acc[emojiKey]) acc[emojiKey] = [];
+      acc[emojiKey].push(r);
+      return acc;
+    }, {});
+    
+    const esRespondiendo = mensajeRespondiendo?.ID_MENSAJE === msg.ID_MENSAJE;
+    
+    return (
+      <div key={msg.ID_MENSAJE} className="group relative">
+        <div className="bg-gray-100 rounded-xl px-4 py-2 max-w-[85%] hover:shadow-md transition">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-indigo-600">
+              {msg.U_NOMBRE} {msg.U_APELLIDO}
+            </p>
+            
+            <div className="opacity-0 group-hover:opacity-100 transition flex gap-1">
+              <button
+                onClick={() => setShowReaccionesMensaje(showReaccionesMensaje === msg.ID_MENSAJE ? null : msg.ID_MENSAJE)}
+                className="p-1 rounded-full hover:bg-gray-200"
+                title="Reaccionar"
+              >
+                <Smile className="h-3 w-3 text-gray-500" />
+              </button>
+              <button
+                onClick={() => setMensajeRespondiendo(msg)}
+                className="p-1 rounded-full hover:bg-gray-200"
+                title="Responder"
+              >
+                <Reply className="h-3 w-3 text-gray-500" />
+              </button>
+            </div>
+          </div>
+          
+          <p className="text-sm text-gray-700 break-words">{msg.MENSAJE}</p>
+          
+          <p className="text-xs text-gray-400 mt-1">
+            {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          
+          {Object.keys(reaccionesAgrupadas).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {Object.entries(reaccionesAgrupadas).map(([emoji, usuarios]) => (
+                <span 
+                  key={emoji} 
+                  className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm cursor-pointer hover:bg-gray-50"
+                  title={usuarios.map(u => u.nombre || u.usuarioNombre || 'Alguien').join(', ')}
+                >
+                  {emoji} {usuarios.length}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {showReaccionesMensaje === msg.ID_MENSAJE && (
+          <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-20">
+            <div className="grid grid-cols-6 gap-1">
+              {emojisDisponibles.slice(0, 12).map((emoji) => (
+                <button
+                  key={emoji.id}
+                  onClick={() => enviarReaccionMensaje(msg.ID_MENSAJE, emoji)}
+                  className="p-1 text-xl hover:bg-gray-100 rounded transition"
+                  title={emoji.nombre}
+                >
+                  {emoji.emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {esRespondiendo && (
+          <div className="mt-2 ml-4 pl-3 border-l-2 border-indigo-300">
+            <div className="bg-indigo-50 rounded-lg p-2">
+              <p className="text-xs text-indigo-600 mb-1">
+                Respondiendo a {msg.U_NOMBRE}:
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={respuestaTexto}
+                  onChange={(e) => setRespuestaTexto(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && enviarRespuestaMensaje()}
+                  placeholder="Escribe tu respuesta..."
+                  className="flex-1 px-3 py-1 text-sm border border-indigo-200 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  autoFocus
+                />
+                <button
+                  onClick={enviarRespuestaMensaje}
+                  disabled={!respuestaTexto.trim()}
+                  className="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm hover:bg-indigo-700"
+                >
+                  Enviar
+                </button>
+                <button
+                  onClick={() => {
+                    setMensajeRespondiendo(null);
+                    setRespuestaTexto('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 px-2"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {msg.respuestas && msg.respuestas.length > 0 && (
+          <div className="ml-6 mt-2 space-y-2">
+            {msg.respuestas.map((respuesta, idx) => (
+              <div key={idx} className="bg-gray-50 rounded-lg px-3 py-2 max-w-[80%]">
+                <p className="text-xs font-semibold text-indigo-500">
+                  {respuesta.U_NOMBRE || respuesta.usuarioNombre} {respuesta.U_APELLIDO || ''}
+                </p>
+                <p className="text-xs text-gray-600">{respuesta.MENSAJE || respuesta.mensaje}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(respuesta.FECHA_CREACION || respuesta.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderParticipantesList = () => (
+    <div className="space-y-2">
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
+        </div>
+      ) : participantesFiltrados.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 text-sm">
+          {searchTerm ? 'No se encontraron participantes' : 'No hay participantes'}
+        </div>
+      ) : (
+        participantesFiltrados.map((p) => (
+          <div key={p.U_CODIGO} className="bg-gray-50 rounded-xl p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                  {p.U_NOMBRE?.charAt(0)}{p.U_APELLIDO?.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 text-sm truncate">
+                    {p.U_NOMBRE} {p.U_APELLIDO}
+                  </p>
+                  {p.puntuacion_total > 0 && (
+                    <p className="text-xs text-yellow-600">⭐ {p.puntuacion_total} pts</p>
+                  )}
+                </div>
+              </div>
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
+                  className="p-1 rounded-full hover:bg-gray-200 transition"
+                >
+                  <Smile className="h-4 w-4 text-gray-400" />
+                </button>
+                
+                {showEmojis === p.U_CODIGO && (
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-20 w-64">
+                    <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+                      {emojisDisponibles.map((emoji) => (
+                        <button
+                          key={emoji.id}
+                          onClick={() => {
+                            enviarReaccion(p.U_CODIGO, emoji);
+                            setShowEmojis(null);
+                          }}
+                          className="p-1 text-xl hover:bg-gray-100 rounded transition"
+                          title={emoji.nombre}
+                        >
+                          {emoji.emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {p.reacciones?.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {p.reacciones.slice(-3).map((r, idx) => (
+                  <span key={idx} className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm" title={r.emisorNombre}>
+                    {r.emoji}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
 
   useEffect(() => {
     if (autoScroll && !loading) {
@@ -384,70 +732,56 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   }, []);
 
-  const emojisPorCategoria = emojisDisponibles.reduce((acc, emoji) => {
-    if (!acc[emoji.categoria]) acc[emoji.categoria] = [];
-    acc[emoji.categoria].push(emoji);
-    return acc;
-  }, {});
-
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Modal principal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm">
-        <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto md:max-h-[90vh] md:max-w-4xl overflow-hidden flex flex-col">
-          {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-            <div className="flex items-center gap-3">
-              {mobile && (
-                <button
-                  onClick={() => setShowParticipantesDrawer(true)}
-                  className="text-white/70 hover:text-white relative"
-                >
-                  <Users className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {participantes.length}
-                  </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm">
+      <div className={`bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto overflow-hidden flex flex-col
+        ${isMobile ? 'max-w-full' : isTablet ? 'max-w-4xl' : 'max-w-6xl'}
+      `}>
+        
+        <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+          
+          <div className={`flex flex-col overflow-hidden ${isDesktop ? 'md:w-3/4' : 'flex-1'}`}>
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+              <div className="flex items-center gap-3">
+                {(isMobile || isTablet) && (
+                  <button
+                    onClick={() => setShowParticipantesDrawer(true)}
+                    className="text-white/70 hover:text-white relative"
+                  >
+                    <Users className="h-5 w-5" />
+                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {participantes.length}
+                    </span>
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold">Chat en vivo</h2>
+                  <p className="text-xs text-indigo-200 truncate max-w-[180px]">{quinielaNombre}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
+                  {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{isConnected ? 'Conectado' : 'Desconectado'}</span>
+                </div>
+                <button onClick={onClose} className="text-white/70 hover:text-white">
+                  <X className="h-5 w-5" />
                 </button>
-              )}
-              <div>
-                <h2 className="text-lg font-bold">Chat en vivo</h2>
-                <p className="text-xs text-indigo-200 truncate max-w-[180px]">{quinielaNombre}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
-                {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              </div>
-              <button onClick={onClose} className="text-white/70 hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
 
-          {/* Chat - Vista principal siempre visible */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Área de mensajes */}
             <div 
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3"
               onScroll={handleScroll}
               tabIndex={0}
             >
-              {hasMoreMessages && !loading && (
-                <div className="text-center">
-                  <button
-                    onClick={cargarMasMensajes}
-                    disabled={loadingMore}
-                    className="text-xs text-indigo-500 hover:text-indigo-700 py-1"
-                  >
-                    {loadingMore ? (
-                      <Loader2 className="h-4 w-4 animate-spin inline" />
-                    ) : (
-                      'Cargar mensajes anteriores ↑'
-                    )}
-                  </button>
+              {loadingMore && (
+                <div className="text-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin inline text-indigo-500" />
+                  <span className="text-xs text-gray-400 ml-2">Cargando mensajes anteriores...</span>
                 </div>
               )}
               
@@ -460,17 +794,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                   No hay mensajes aún. ¡Sé el primero en saludar!
                 </div>
               ) : (
-                mensajes.map((msg, idx) => (
-                  <div key={msg.ID_MENSAJE || idx} className="bg-gray-100 rounded-xl px-4 py-2 max-w-[85%]">
-                    <p className="text-xs font-semibold text-indigo-600">
-                      {msg.U_NOMBRE} {msg.U_APELLIDO}
-                    </p>
-                    <p className="text-sm text-gray-700 break-words">{msg.MENSAJE}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                ))
+                mensajes.map((msg) => renderMensaje(msg))
               )}
               
               {Object.values(typingUsers).some(v => v) && (
@@ -498,7 +822,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input de mensaje - Siempre visible */}
             <div className="p-4 border-t border-gray-200 bg-gray-50">
               <div className="flex gap-2">
                 <button
@@ -533,22 +856,45 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               </p>
             </div>
           </div>
+
+          {isDesktop && (
+            <div className="md:w-1/4 bg-white border-l border-gray-200 overflow-hidden flex flex-col">
+              <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                <h3 className="font-bold">Participantes</h3>
+                <p className="text-sm text-indigo-200">{participantes.length} personas</p>
+              </div>
+
+              <div className="p-3 border-b border-gray-200 bg-gray-50">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar participantes..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-3">
+                {renderParticipantesList()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Drawer de participantes para móvil */}
-      {mobile && (
+      {(isMobile || isTablet) && showParticipantesDrawer && (
         <>
-          {showParticipantesDrawer && (
-            <div 
-              className="fixed inset-0 bg-black/50 z-50 transition-opacity"
-              onClick={() => setShowParticipantesDrawer(false)}
-            />
-          )}
+          <div 
+            className="fixed inset-0 bg-black/50 z-[60] transition-opacity"
+            onClick={() => setShowParticipantesDrawer(false)}
+          />
           
-          <div className={`fixed top-0 left-0 bottom-0 w-11/12 max-w-sm bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
-            showParticipantesDrawer ? 'translate-x-0' : '-translate-x-full'
-          }`}>
+          <div className={`fixed top-0 left-0 bottom-0 w-11/12 max-w-sm bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out flex flex-col
+            ${showParticipantesDrawer ? 'translate-x-0' : '-translate-x-full'}
+          `}>
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
               <div>
                 <h3 className="font-bold">Participantes</h3>
@@ -576,206 +922,12 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
-                </div>
-              ) : participantesFiltrados.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  {searchTerm ? 'No se encontraron participantes' : 'No hay participantes'}
-                </div>
-              ) : (
-                participantesFiltrados.map((p) => (
-                  <div key={p.U_CODIGO} className="bg-white rounded-xl border border-gray-200 p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
-                          {p.U_NOMBRE?.charAt(0)}{p.U_APELLIDO?.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-800 text-sm truncate">
-                            {p.U_NOMBRE} {p.U_APELLIDO}
-                          </p>
-                          {p.puntuacion_total > 0 && (
-                            <p className="text-xs text-yellow-600">⭐ {p.puntuacion_total} pts</p>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="relative flex-shrink-0">
-                        <button
-                          onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
-                          className="p-2 rounded-full hover:bg-gray-100 transition"
-                        >
-                          <Smile className="h-5 w-5 text-gray-400" />
-                        </button>
-                        
-                        {showEmojis === p.U_CODIGO && (
-                          <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-10 w-72">
-                            {recentEmojis.length > 0 && showRecentEmojis && (
-                              <div className="mb-3">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs text-gray-500">🕐 Recientes</span>
-                                  <button 
-                                    onClick={() => setShowRecentEmojis(false)}
-                                    className="text-xs text-gray-400 hover:text-gray-600"
-                                  >
-                                    Ocultar
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-8 gap-1">
-                                  {recentEmojis.map((emoji) => (
-                                    <button
-                                      key={emoji.id}
-                                      onClick={() => {
-                                        enviarReaccion(p.U_CODIGO, emoji);
-                                        setShowEmojis(null);
-                                      }}
-                                      className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition"
-                                      title={emoji.nombre}
-                                    >
-                                      {emoji.emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                                <div className="border-t border-gray-100 my-2"></div>
-                              </div>
-                            )}
-                            <div className="max-h-64 overflow-y-auto">
-                              {Object.entries(emojisPorCategoria).map(([categoria, emojis]) => (
-                                <div key={categoria} className="mb-3">
-                                  <span className="text-xs text-gray-500 capitalize">{categoria}</span>
-                                  <div className="grid grid-cols-4 gap-1 mt-1">
-                                    {emojis.map((emoji) => (
-                                      <button
-                                        key={emoji.id}
-                                        onClick={() => {
-                                          enviarReaccion(p.U_CODIGO, emoji);
-                                          setShowEmojis(null);
-                                        }}
-                                        className="p-2 rounded-lg text-2xl hover:bg-gray-100 transition"
-                                        title={emoji.nombre}
-                                      >
-                                        {emoji.emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {p.reacciones?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {p.reacciones.slice(-5).map((r, idx) => (
-                          <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5" title={r.emisorNombre}>
-                            {r.emoji}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
+            <div className="flex-1 overflow-y-auto p-3">
+              {renderParticipantesList()}
             </div>
           </div>
         </>
       )}
-
-      {/* Versión desktop: panel lateral de participantes */}
-      {!mobile && (
-        <div className="fixed right-0 top-0 bottom-0 w-80 bg-white shadow-xl z-40 transform transition-transform border-l border-gray-200 overflow-hidden flex flex-col">
-          <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-            <h3 className="font-bold">Participantes</h3>
-            <p className="text-sm text-indigo-200">{participantes.length} personas en la quiniela</p>
-          </div>
-
-          <div className="p-3 border-b border-gray-200 bg-gray-50">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar participantes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
-              </div>
-            ) : participantesFiltrados.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm">
-                {searchTerm ? 'No se encontraron participantes' : 'No hay participantes'}
-              </div>
-            ) : (
-              participantesFiltrados.map((p) => (
-                <div key={p.U_CODIGO} className="bg-gray-50 rounded-xl p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                        {p.U_NOMBRE?.charAt(0)}{p.U_APELLIDO?.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800 text-sm truncate">
-                          {p.U_NOMBRE} {p.U_APELLIDO}
-                        </p>
-                        {p.puntuacion_total > 0 && (
-                          <p className="text-xs text-yellow-600">⭐ {p.puntuacion_total} pts</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
-                        className="p-1 rounded-full hover:bg-gray-200 transition"
-                      >
-                        <Smile className="h-4 w-4 text-gray-400" />
-                      </button>
-                      
-                      {showEmojis === p.U_CODIGO && (
-                        <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-20 w-64">
-                          <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
-                            {emojisDisponibles.map((emoji) => (
-                              <button
-                                key={emoji.id}
-                                onClick={() => {
-                                  enviarReaccion(p.U_CODIGO, emoji);
-                                  setShowEmojis(null);
-                                }}
-                                className="p-1 text-xl hover:bg-gray-100 rounded transition"
-                                title={emoji.nombre}
-                              >
-                                {emoji.emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {p.reacciones?.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {p.reacciones.slice(-3).map((r, idx) => (
-                        <span key={idx} className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm" title={r.emisorNombre}>
-                          {r.emoji}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 };
