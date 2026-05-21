@@ -32,6 +32,9 @@ const HomePage = () => {
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState({});
   const [totalMensajesNoLeidos, setTotalMensajesNoLeidos] = useState(0);
   
+  // ✅ Nuevo estado para selector de ranking
+  const [showRankingSelector, setShowRankingSelector] = useState(false);
+  
   const { isConnected, lastMessage } = useSocket(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -161,6 +164,29 @@ const HomePage = () => {
     }
   };
 
+  // ✅ Nueva función para manejar el ranking dinámico
+  const handleRankingClick = () => {
+    if (misQuinielasList.length === 0) {
+      toast.error('No estás inscrito en ninguna quiniela');
+      return;
+    }
+    if (misQuinielasList.length === 1) {
+      navigate(`/ranking/${misQuinielasList[0].ID_QUINIELA}`);
+    } else {
+      setQuinielasDisponibles(misQuinielasList);
+      setShowRankingSelector(true);
+    }
+  };
+
+  // ✅ Nueva función para navegar al ranking desde el selector
+  const handleRankingSelect = (quiniela) => {
+    navigate(`/ranking/${quiniela.ID_QUINIELA}`);
+    setShowRankingSelector(false);
+  };
+
+  // ✅ Calcular posición promedio (aproximada) para mostrar
+  const posicionPromedio = misQuinielasList.length > 0 ? 'Top' : '?';
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -174,7 +200,7 @@ const HomePage = () => {
       {showTour && <DriverTour onComplete={() => setShowTour(false)} />}
       <FloatingHelpWidget />
 
-      {/* Selector de quinielas */}
+      {/* Selector de quinielas para Participantes */}
       {showSelectorQuinielas && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md overflow-hidden mx-3">
@@ -236,6 +262,48 @@ const HomePage = () => {
         </div>
       )}
 
+      {/* ✅ Nuevo Selector de quinielas para Ranking */}
+      {showRankingSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md overflow-hidden mx-3">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 sm:p-5 text-white">
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                <div className="flex-1">
+                  <h2 className="text-lg sm:text-xl font-bold">Ver Ranking</h2>
+                  <p className="text-xs sm:text-sm text-purple-200">Selecciona una quiniela</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 sm:p-4 space-y-2 max-h-80 sm:max-h-96 overflow-y-auto">
+              {quinielasDisponibles.map((q) => (
+                <button
+                  key={q.ID_QUINIELA}
+                  onClick={() => handleRankingSelect(q)}
+                  className="w-full text-left p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition active:bg-purple-100"
+                >
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+                        {q.NOMBRE}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-1">
+                        🏆 {q.C_CAMPEONATO} | ⭐ {q.PUNTOS_TOTALES || 0} pts
+                      </p>
+                    </div>
+                    <span className="text-purple-400 group-hover:translate-x-1 transition">→</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 sm:p-4 border-t border-gray-200">
+              <button onClick={() => setShowRankingSelector(false)} className="w-full text-gray-500 hover:text-gray-700 py-2 text-sm">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModalParticipantes && (
         <ModalParticipantes
           isOpen={showModalParticipantes}
@@ -274,7 +342,7 @@ const HomePage = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
-              ¡Bienvenido, {userInfo.NOMBRE_COMPLETO || user?.U_NOMBRE || 'Usuario'}! 👋
+              ¡Bienvenido, {user?.U_NOMBRE || 'Usuario'}! 👋
             </h1>
             <p className="text-sm sm:text-base">
               Participa en nuestras quinielas, predice los resultados y gana puntos.
@@ -337,12 +405,21 @@ const HomePage = () => {
           )}
         </div>
 
-        {/* Ranking */}
-        <div onClick={() => navigate('/ranking/15')} id="ranking-link" className="bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-lg transition cursor-pointer hover:bg-purple-50 active:bg-purple-100 group">
+        {/* ✅ Ranking DINÁMICO */}
+        <div onClick={handleRankingClick} id="ranking-link" className="bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-lg transition cursor-pointer hover:bg-purple-50 active:bg-purple-100 group">
           <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 mb-2 group-hover:scale-110 transition" />
           <h3 className="text-base sm:text-lg font-semibold text-gray-700">Ranking</h3>
-          <p className="text-2xl sm:text-3xl font-bold text-purple-600">#1</p>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">Tu posición</p>
+          <p className="text-2xl sm:text-3xl font-bold text-purple-600">{posicionPromedio}</p>
+          <p className="text-xs sm:text-sm text-gray-400 mt-1">
+            {misQuinielasList.length === 0 
+              ? 'No estás inscrito' 
+              : misQuinielasList.length === 1 
+                ? 'Tu posición' 
+                : `${misQuinielasList.length} quinielas`}
+          </p>
+          {misQuinielasList.length > 1 && (
+            <p className="text-xs text-purple-500 mt-2 font-medium">📊 Seleccionar quiniela</p>
+          )}
         </div>
       </div>
 
