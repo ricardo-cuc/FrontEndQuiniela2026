@@ -128,7 +128,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
 
   const mostrarNotificacionReaccion = (reaccion) => {
     if (reaccion.receptorId === usuarioActual) {
-      toast.success(`💬 ${reaccion.emisorNombre || 'Alguien'} te envió ${reaccion.emoji}`, {
+      toast.success(`💬 ${reaccion.emisorNombre || 'Alguien'} reaccionó con ${reaccion.emoji}`, {
         duration: 3000,
         icon: reaccion.emoji,
         style: {
@@ -137,6 +137,22 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         },
       });
     }
+  };
+
+  // ✅ Función para actualizar reacciones localmente
+  const actualizarReaccionesLocalmente = (receptorId, emoji, emisorId, emisorNombre) => {
+    setParticipantes(prev => prev.map(p => {
+      if (p.U_CODIGO === receptorId) {
+        const nuevasReacciones = [...(p.reacciones || []), {
+          emoji: emoji,
+          de: emisorId,
+          emisorNombre: emisorNombre,
+          fecha: new Date()
+        }];
+        return { ...p, reacciones: nuevasReacciones };
+      }
+      return p;
+    }));
   };
 
   useEffect(() => {
@@ -179,20 +195,15 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           }, 2000);
         });
 
+        // ✅ Escuchar evento de nueva reacción
         socketRef.current.on('nueva-reaccion', (reaccion) => {
-          setParticipantes(prev => prev.map(p => 
-            p.U_CODIGO === reaccion.receptorId
-              ? { 
-                  ...p, 
-                  reacciones: [...(p.reacciones || []), { 
-                    emoji: reaccion.emoji, 
-                    de: reaccion.emisorId,
-                    emisorNombre: reaccion.emisorNombre,
-                    fecha: new Date()
-                  }] 
-                }
-              : p
-          ));
+          console.log('📢 Nueva reacción recibida:', reaccion);
+          actualizarReaccionesLocalmente(
+            reaccion.receptorId,
+            reaccion.emoji,
+            reaccion.emisorId,
+            reaccion.emisorNombre
+          );
           mostrarNotificacionReaccion(reaccion);
         });
       } else {
@@ -242,8 +253,14 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50`)
       ]);
       
-      setParticipantes(participantesRes.data.data || []);
-      setParticipantesFiltrados(participantesRes.data.data || []);
+      // Inicializar reacciones vacías si no existen
+      const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
+        ...p,
+        reacciones: p.reacciones || []
+      }));
+      
+      setParticipantes(participantesConReacciones);
+      setParticipantesFiltrados(participantesConReacciones);
       
       const mensajesOrdenados = (mensajesRes.data.data || []).reverse();
       setMensajes(mensajesOrdenados);
@@ -312,20 +329,34 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
+  // ✅ Función mejorada para enviar reacción
   const enviarReaccion = async (receptorId, emoji) => {
     try {
+      // Optimistic update: mostrar inmediatamente la reacción
+      const usuarioEmisor = {
+        nombre: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).U_NOMBRE : 'Tú',
+        id: usuarioActual
+      };
+      
+      actualizarReaccionesLocalmente(receptorId, emoji.emoji, usuarioActual, usuarioEmisor.nombre);
+      
+      // Cerrar el selector de emojis
+      setShowEmojis(null);
+      
+      // Enviar al backend
       await api.post(`/api/quinielas/${quinielaId}/reacciones`, {
         usuario_id: receptorId,
         emoji: emoji.emoji
       });
       
       saveRecentEmoji(emoji);
-      toast.success(`Reacción ${emoji.emoji} enviada`);
-      setShowEmojis(null);
+      toast.success(`Reacción ${emoji.emoji} enviada`, { duration: 1500 });
       
     } catch (error) {
       console.error('Error enviando reacción:', error);
       toast.error(error.response?.data?.message || 'Error al enviar reacción');
+      // Recargar participantes para corregir el estado optimista si falló
+      cargarDatos();
     }
   };
 
@@ -508,7 +539,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       {/* Drawer de participantes para móvil */}
       {mobile && (
         <>
-          {/* Overlay */}
           {showParticipantesDrawer && (
             <div 
               className="fixed inset-0 bg-black/50 z-50 transition-opacity"
@@ -516,11 +546,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             />
           )}
           
-          {/* Drawer */}
           <div className={`fixed top-0 left-0 bottom-0 w-11/12 max-w-sm bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
             showParticipantesDrawer ? 'translate-x-0' : '-translate-x-full'
           }`}>
-            {/* Drawer Header */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
               <div>
                 <h3 className="font-bold">Participantes</h3>
@@ -534,7 +562,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               </button>
             </div>
 
-            {/* Búsqueda */}
             <div className="p-3 border-b border-gray-200 bg-gray-50">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -549,7 +576,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               </div>
             </div>
 
-            {/* Lista de participantes */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {loading ? (
                 <div className="flex justify-center py-8">
@@ -645,7 +671,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                     {p.reacciones?.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {p.reacciones.slice(-5).map((r, idx) => (
-                          <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5">
+                          <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5" title={r.emisorNombre}>
                             {r.emoji}
                           </span>
                         ))}
@@ -706,35 +732,39 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
-                      className="p-1 rounded-full hover:bg-gray-200 transition"
-                    >
-                      <Smile className="h-4 w-4 text-gray-400" />
-                    </button>
-                  </div>
-                  {showEmojis === p.U_CODIGO && (
-                    <div className="mt-2 bg-white rounded-lg shadow-lg border p-2">
-                      <div className="grid grid-cols-6 gap-1">
-                        {emojisDisponibles.slice(0, 12).map((emoji) => (
-                          <button
-                            key={emoji.id}
-                            onClick={() => {
-                              enviarReaccion(p.U_CODIGO, emoji);
-                              setShowEmojis(null);
-                            }}
-                            className="p-1 text-xl hover:bg-gray-100 rounded"
-                          >
-                            {emoji.emoji}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowEmojis(showEmojis === p.U_CODIGO ? null : p.U_CODIGO)}
+                        className="p-1 rounded-full hover:bg-gray-200 transition"
+                      >
+                        <Smile className="h-4 w-4 text-gray-400" />
+                      </button>
+                      
+                      {showEmojis === p.U_CODIGO && (
+                        <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-20 w-64">
+                          <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+                            {emojisDisponibles.map((emoji) => (
+                              <button
+                                key={emoji.id}
+                                onClick={() => {
+                                  enviarReaccion(p.U_CODIGO, emoji);
+                                  setShowEmojis(null);
+                                }}
+                                className="p-1 text-xl hover:bg-gray-100 rounded transition"
+                                title={emoji.nombre}
+                              >
+                                {emoji.emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                   {p.reacciones?.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {p.reacciones.slice(-3).map((r, idx) => (
-                        <span key={idx} className="text-xs bg-white rounded-full px-2 py-0.5">
+                        <span key={idx} className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm" title={r.emisorNombre}>
                           {r.emoji}
                         </span>
                       ))}
