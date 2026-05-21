@@ -47,7 +47,7 @@ const MisAciertosPage = () => {
         await seleccionarQuiniela(quinielasArray[0].ID_QUINIELA);
       }
     } catch (error) {
-      console.error('❌ Error:', error);
+      //console.error('❌ Error:', error);
       toast.error('Error al cargar tus quinielas');
     } finally {
       setLoading(false);
@@ -86,7 +86,7 @@ const MisAciertosPage = () => {
       });
       
     } catch (error) {
-      console.error('❌ Error cargando partidos:', error);
+      //console.error('❌ Error cargando partidos:', error);
       toast.error('Error al cargar los aciertos');
     } finally {
       setCargandoPartidos(false);
