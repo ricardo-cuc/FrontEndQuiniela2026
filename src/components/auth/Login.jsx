@@ -27,8 +27,8 @@ const Login = () => {
   const [esPrimeraVez, setEsPrimeraVez] = useState(false);
 
   const [formData, setFormData] = useState({
-    u_correo: '',
-    u_password: '',
+    U_CORREO: '',
+    U_PASSWORD: '',
   });
 
   useEffect(() => {
@@ -81,7 +81,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.u_correo.trim() || !formData.u_password.trim()) {
+    if (!formData.U_CORREO.trim() || !formData.U_PASSWORD.trim()) {
       toast.error('Por favor completa todos los campos');
       return;
     }
@@ -321,7 +321,7 @@ const Login = () => {
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div>
                   <label
-                    htmlFor="u_correo"
+                    htmlFor="U_CORREO"
                     className="mb-2 block text-sm font-medium text-slate-700"
                   >
                     Correo electrónico
@@ -329,12 +329,12 @@ const Login = () => {
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
-                      id="u_correo"
-                      name="u_correo"
+                      id="U_CORREO"
+                      name="U_CORREO"
                       type="email"
                       autoComplete="email"
                       required
-                      value={formData.u_correo}
+                      value={formData.U_CORREO}
                       onChange={handleChange}
                       placeholder="correo@ejemplo.com"
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
@@ -345,7 +345,7 @@ const Login = () => {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <label
-                      htmlFor="u_password"
+                      htmlFor="U_PASSWORD"
                       className="block text-sm font-medium text-slate-700"
                     >
                       Contraseña
@@ -354,12 +354,12 @@ const Login = () => {
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
-                      id="u_password"
-                      name="u_password"
+                      id="U_PASSWORD"
+                      name="U_PASSWORD"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       required
-                      value={formData.u_password}
+                      value={formData.U_PASSWORD}
                       onChange={handleChange}
                       placeholder="Ingresa tu contraseña"
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-12 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
