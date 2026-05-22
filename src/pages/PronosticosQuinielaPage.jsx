@@ -266,7 +266,7 @@ const PronosticosQuinielaPage = () => {
     if (!a.YA_PREDICHO && b.YA_PREDICHO) return -1;
     if (a.YA_PREDICHO && !b.YA_PREDICHO) return 1;
     
-    // Luego por fecha (los más próximos primero)
+    // Luego por FECHA (los más próximos primero)
     if (a.FECHA && b.FECHA) {
       return new Date(a.FECHA) - new Date(b.FECHA);
     }
