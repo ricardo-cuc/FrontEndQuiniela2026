@@ -117,7 +117,14 @@ const Register = () => {
     setIsLoading(true);
     try {
       const { confirmPassword, ...userData } = formData;
+      
+      console.log('=========================================');
+      console.log('🔴 [REGISTER] Enviando registro:');
+      console.log('   - userData:', userData);
+      console.log('=========================================');
+      
       await register(userData);
+      
       toast.success('✅ ¡Registro exitoso! Ahora puedes iniciar sesión');
       toast('📌 Recuerda: Un administrador debe inscribirte en una quiniela', {
         duration: 5000,
@@ -125,11 +132,14 @@ const Register = () => {
       });
       navigate('/login');
     } catch (error) {
-      let mensaje = error.response?.data?.mensaje || 'Error al registrar usuario';
-      if (error.response?.status === 400) {
-        mensaje = 'El código o correo ya está registrado. Intenta con otro.';
+      console.error('❌ [REGISTER] Error:', error);
+      
+      if (error.response?.data?.errors) {
+        error.response.data.errors.forEach(err => toast.error(err.mensaje));
+      } else {
+        const mensaje = error.response?.data?.mensaje || 'Error al registrar usuario. Intenta con otro código o correo.';
+        toast.error(mensaje);
       }
-      toast.error(mensaje);
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +156,7 @@ const Register = () => {
       </div>
 
       <div className="relative z-10 min-h-screen grid lg:grid-cols-2">
-        {/* Panel izquierdo - Mismo que Login */}
+        {/* Panel izquierdo */}
         <div className="hidden lg:flex flex-col justify-between p-10 xl:p-14 text-white">
           <div>
             <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md shadow-xl">
