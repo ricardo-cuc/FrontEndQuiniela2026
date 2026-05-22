@@ -132,7 +132,7 @@ const PronosticosQuinielaPage = () => {
     if (lastMessage && !actualizandoRef.current) {
       actualizandoRef.current = true;
       
-      console.log('📡 Evento recibido:', lastMessage);
+      //console.log('📡 Evento recibido:', lastMessage);
       
       let message = '';
       
