@@ -196,6 +196,26 @@ const Register = () => {
               </div>
             </div>
 
+      {/* Fondo decorativo CON IMAGEN AGREGADA */}
+      <div className="absolute inset-0">
+        {/* Círculos decorativos originales */}
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-indigo-600/30 blur-3xl" />
+        <div className="absolute top-1/3 -right-24 h-80 w-80 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-600/20 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_35%)]" />
+        
+        {/* ✅ Imagen de fondo - mascotas mundial  */}
+        <div 
+          className="absolute inset-0 opacity-10 pointer-events-none select-none"
+          style={{
+            backgroundImage: 'url("/mascotas-mundial.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            mixBlendMode: 'overlay'
+          }}
+        />
+      </div>
             <div className="mt-8 pt-4 border-t border-white/10">
               <p className="text-sm text-slate-400 mb-3">Síguenos en redes</p>
               <div className="flex gap-3">
