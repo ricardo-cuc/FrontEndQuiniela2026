@@ -30,7 +30,7 @@ const QuinielaDetailPage = () => {
   // 🔥 Efecto para escuchar mensajes en tiempo real
   useEffect(() => {
     if (lastMessage) {
-      console.log('📡 Evento recibido en frontend:', lastMessage);
+      //console.log('📡 Evento recibido en frontend:', lastMessage);
       
       let message = '';
       
