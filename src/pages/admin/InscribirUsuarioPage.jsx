@@ -10,7 +10,7 @@ const InscribirUsuarioPage = () => {
   const [quinielas, setQuinielas] = useState([]);
   const [formData, setFormData] = useState({
     id_quiniela: '',
-    u_codigo: '',
+    U_CODIGO: '',
     estado: 'ACTIVO'
   });
 
@@ -41,7 +41,7 @@ const InscribirUsuarioPage = () => {
     setLoading(true);
     
     // Validar que el código tenga 5 caracteres
-    if (formData.u_codigo.trim().length !== 5) {
+    if (formData.U_CODIGO.trim().length !== 5) {
       toast.error('El código de usuario debe tener exactamente 5 caracteres');
       setLoading(false);
       return;
@@ -49,7 +49,7 @@ const InscribirUsuarioPage = () => {
 
     try {
       await api.post(`/api/admin/quinielas/${formData.id_quiniela}/usuarios`, {
-        u_codigo: formData.u_codigo.trim(),
+        U_CODIGO: formData.U_CODIGO.trim(),
         estado: formData.estado
       });
       toast.success('✅ Usuario inscrito exitosamente');
@@ -109,10 +109,10 @@ const InscribirUsuarioPage = () => {
             </label>
             <input
               type="text"
-              name="u_codigo"
+              name="U_CODIGO"
               required
               maxLength={5}
-              value={formData.u_codigo}
+              value={formData.U_CODIGO}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Ej: 00656, U0001, ADMIN"
@@ -140,7 +140,7 @@ const InscribirUsuarioPage = () => {
           <div className="pt-4">
             <button
               type="submit"
-              disabled={loading || !formData.id_quiniela || !formData.u_codigo}
+              disabled={loading || !formData.id_quiniela || !formData.U_CODIGO}
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <UserPlus className="h-4 w-4 mr-2" />
