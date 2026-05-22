@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
   const clearExpiredSession = () => {
     const token = sessionStorage.getItem('token');
     if (token && isTokenExpired(token)) {
-      console.log('Sesión expirada, limpiando...');
+      //console.log('Sesión expirada, limpiando...');
       authService.logout();
       clearTokenSchedule();
       setUser(null);
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
       if (!sessionExpired) {
         const currentUser = authService.getCurrentUser();
         if (currentUser) {
-          console.log('🔴 [AUTH] Usuario cargado de sessionStorage:', currentUser);
+          //console.log('🔴 [AUTH] Usuario cargado de sessionStorage:', currentUser);
           setUser(currentUser);
           scheduleTokenRefresh();
         } else {
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     const checkSessionExpiration = () => {
       const token = sessionStorage.getItem('token');
       if (token && isTokenExpired(token)) {
-        console.log('Sesión expirada detectada durante verificación periódica');
+        //console.log('Sesión expirada detectada durante verificación periódica');
         authService.logout();
         clearTokenSchedule();
         setUser(null);
@@ -86,12 +86,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await authService.login(credentials);
       
-      console.log('=========================================');
-      console.log('🔴 [AUTH] Respuesta del login:');
-      console.log('   - data completo:', data);
-      console.log('   - data.usuario:', data.usuario);
-      console.log('   - Propiedades de data.usuario:', Object.keys(data.usuario || {}));
-      console.log('=========================================');
+      //console.log('=========================================');
+      //console.log('🔴 [AUTH] Respuesta del login:');
+      //console.log('   - data completo:', data);
+      //console.log('   - data.usuario:', data.usuario);
+      //console.log('   - Propiedades de data.usuario:', Object.keys(data.usuario || {}));
+      //console.log('=========================================');
       
       if (data.usuario) {
         const userData = {
@@ -103,8 +103,8 @@ export const AuthProvider = ({ children }) => {
           U_ROL: data.usuario.U_ROL || data.usuario.rol,
         };
         
-        console.log('🔴 [AUTH] userData normalizado a guardar:', userData);
-        console.log('🔴 [AUTH] U_CODIGO guardado:', userData.U_CODIGO);
+        //console.log('🔴 [AUTH] userData normalizado a guardar:', userData);
+        //console.log('🔴 [AUTH] U_CODIGO guardado:', userData.U_CODIGO);
         
         setUser(userData);
         sessionStorage.setItem('user', JSON.stringify(userData));
@@ -132,10 +132,10 @@ export const AuthProvider = ({ children }) => {
         U_ESTADO: userData.U_ESTADO || 'ACTIVO'
       };
       
-      console.log('=========================================');
-      console.log('🔴 [AUTH REGISTER] Enviando al backend:');
-      console.log('   - dataToSend:', dataToSend);
-      console.log('=========================================');
+      //console.log('=========================================');
+      //console.log('🔴 [AUTH REGISTER] Enviando al backend:');
+      //console.log('   - dataToSend:', dataToSend);
+      //console.log('=========================================');
       
       const response = await api.post('/api/usuarios/register', dataToSend);
       return response.data;
