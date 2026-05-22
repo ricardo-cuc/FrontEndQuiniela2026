@@ -680,7 +680,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-2 text-center">
-                💡 Sé respetuoso. Los mensajes son visibles para todos.
+                💡 Sé respetuoso. Los mensajes son visibles para RRHH.
               </p>
             </div>
           </div>
