@@ -118,10 +118,10 @@ const Register = () => {
     try {
       const { confirmPassword, ...userData } = formData;
       
-      console.log('=========================================');
-      console.log('🔴 [REGISTER] Enviando registro:');
-      console.log('   - userData:', userData);
-      console.log('=========================================');
+      //console.log('=========================================');
+      //console.log('🔴 [REGISTER] Enviando registro:');
+      //console.log('   - userData:', userData);
+      //console.log('=========================================');
       
       await register(userData);
       
