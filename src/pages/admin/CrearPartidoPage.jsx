@@ -12,13 +12,13 @@ const CrearPartidoPage = () => {
   const [equipos, setEquipos] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [formData, setFormData] = useState({
-    c_campeonato: '',
+    C_CAMPEONATO: '',
     id_quiniela: '',
-    c_equipo_1: '',
-    c_equipo_2: '',
-    id_grupo: '',
-    fecha: '',
-    actualizado_por: ''
+    EQUIPO_LOCAL: '',
+    EQUIPO_VISITANTE: '',
+    ID_GRUPO: '',
+    FECHA: '',
+    ACTUALIZADO_POR: ''
   });
 
   useEffect(() => {
@@ -27,15 +27,15 @@ const CrearPartidoPage = () => {
 
   // Cargar equipos cuando cambia el campeonato (NO depende de la quiniela)
   useEffect(() => {
-    if (formData.c_campeonato) {
-      cargarEquipos(formData.c_campeonato);
-      cargarQuinielas(formData.c_campeonato);
+    if (formData.C_CAMPEONATO) {
+      cargarEquipos(formData.C_CAMPEONATO);
+      cargarQuinielas(formData.C_CAMPEONATO);
     } else {
       setEquipos([]);
       setQuinielas([]);
       setGrupos([]);
     }
-  }, [formData.c_campeonato]);
+  }, [formData.C_CAMPEONATO]);
 
   // Cargar grupos cuando cambia la quiniela
   useEffect(() => {
@@ -56,24 +56,24 @@ const CrearPartidoPage = () => {
     }
   };
 
-  const cargarQuinielas = async (c_campeonato) => {
+  const cargarQuinielas = async (C_CAMPEONATO) => {
     try {
-      const response = await api.get(`/api/admin/campeonatos/${c_campeonato}/quinielas`);
-      //console.log('Quinielas para', c_campeonato, ':', response.data.data);
+      const response = await api.get(`/api/admin/campeonatos/${C_CAMPEONATO}/quinielas`);
+      //console.log('Quinielas para', C_CAMPEONATO, ':', response.data.data);
       setQuinielas(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar quinielas');
     }
   };
 
-  const cargarEquipos = async (c_campeonato) => {
+  const cargarEquipos = async (C_CAMPEONATO) => {
     try {
-      //console.log('Cargando equipos para campeonato:', c_campeonato);
-      const response = await api.get(`/api/equipos/campeonato/${c_campeonato}`);
+      //console.log('Cargando equipos para campeonato:', C_CAMPEONATO);
+      const response = await api.get(`/api/equipos/campeonato/${C_CAMPEONATO}`);
       //console.log('Equipos recibidos:', response.data.data);
       setEquipos(response.data.data || []);
       if (response.data.data?.length === 0) {
-        toast.warning(`No hay equipos para el campeonato ${c_campeonato}`);
+        toast.warning(`No hay equipos para el campeonato ${C_CAMPEONATO}`);
       }
     } catch (error) {
       //console.error('Error al cargar equipos:', error);
@@ -106,7 +106,7 @@ const CrearPartidoPage = () => {
     e.preventDefault();
     setLoading(true);
     
-    if (formData.c_equipo_1 === formData.c_equipo_2) {
+    if (formData.EQUIPO_LOCAL === formData.EQUIPO_VISITANTE) {
       toast.error('Los equipos deben ser diferentes');
       setLoading(false);
       return;
@@ -114,21 +114,21 @@ const CrearPartidoPage = () => {
 
     try {
       //console.log('Creando partido:', {
-      //  c_campeonato: formData.c_campeonato,
-      //  c_equipo_1: formData.c_equipo_1,
-      //  c_equipo_2: formData.c_equipo_2,
-      //  id_grupo: formData.id_grupo,
-      //  fecha: formData.fecha,
-      //  actualizado_por: formData.actualizado_por
+      //  C_CAMPEONATO: formData.C_CAMPEONATO,
+      //  EQUIPO_LOCAL: formData.EQUIPO_LOCAL,
+      //  EQUIPO_VISITANTE: formData.EQUIPO_VISITANTE,
+      //  ID_GRUPO: formData.ID_GRUPO,
+      //  FECHA: formData.FECHA,
+      //  ACTUALIZADO_POR: formData.ACTUALIZADO_POR
       //});
       
       await api.post('/api/partidos', {
-        c_campeonato: formData.c_campeonato,
-        c_equipo_1: formData.c_equipo_1,
-        c_equipo_2: formData.c_equipo_2,
-        id_grupo: formData.id_grupo ? parseInt(formData.id_grupo) : null,
-        fecha: formData.fecha || null,
-        actualizado_por: formData.actualizado_por || null
+        C_CAMPEONATO: formData.C_CAMPEONATO,
+        EQUIPO_LOCAL: formData.EQUIPO_LOCAL,
+        EQUIPO_VISITANTE: formData.EQUIPO_VISITANTE,
+        ID_GRUPO: formData.ID_GRUPO ? parseInt(formData.ID_GRUPO) : null,
+        FECHA: formData.FECHA || null,
+        ACTUALIZADO_POR: formData.ACTUALIZADO_POR || null
       });
       toast.success('Partido creado exitosamente');
       navigate('/admin');
@@ -157,9 +157,9 @@ const CrearPartidoPage = () => {
               Campeonato *
             </label>
             <select
-              name="c_campeonato"
+              name="C_CAMPEONATO"
               required
-              value={formData.c_campeonato}
+              value={formData.C_CAMPEONATO}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             >
@@ -182,7 +182,7 @@ const CrearPartidoPage = () => {
               required
               value={formData.id_quiniela}
               onChange={handleChange}
-              disabled={!formData.c_campeonato}
+              disabled={!formData.C_CAMPEONATO}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
             >
               <option value="">Selecciona una quiniela</option>
@@ -201,11 +201,11 @@ const CrearPartidoPage = () => {
                 Equipo Local *
               </label>
               <select
-                name="c_equipo_1"
+                name="EQUIPO_LOCAL"
                 required
-                value={formData.c_equipo_1}
+                value={formData.EQUIPO_LOCAL}
                 onChange={handleChange}
-                disabled={!formData.c_campeonato}
+                disabled={!formData.C_CAMPEONATO}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
               >
                 <option value="">Selecciona un equipo</option>
@@ -222,11 +222,11 @@ const CrearPartidoPage = () => {
                 Equipo Visitante *
               </label>
               <select
-                name="c_equipo_2"
+                name="EQUIPO_VISITANTE"
                 required
-                value={formData.c_equipo_2}
+                value={formData.EQUIPO_VISITANTE}
                 onChange={handleChange}
-                disabled={!formData.c_campeonato}
+                disabled={!formData.C_CAMPEONATO}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
               >
                 <option value="">Selecciona un equipo</option>
@@ -245,9 +245,9 @@ const CrearPartidoPage = () => {
               Grupo *
             </label>
             <select
-              name="id_grupo"
+              name="ID_GRUPO"
               required
-              value={formData.id_grupo}
+              value={formData.ID_GRUPO}
               onChange={handleChange}
               disabled={!formData.id_quiniela}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
@@ -261,15 +261,15 @@ const CrearPartidoPage = () => {
             </select>
           </div>
           
-          {/* Fecha */}
+          {/* FECHA */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha y Hora del Partido
+              FECHA y Hora del Partido
             </label>
             <input
               type="datetime-local"
-              name="fecha"
-              value={formData.fecha}
+              name="FECHA"
+              value={formData.FECHA}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
@@ -282,9 +282,9 @@ const CrearPartidoPage = () => {
             </label>
             <input
               type="text"
-              name="actualizado_por"
+              name="ACTUALIZADO_POR"
               maxLength={5}
-              value={formData.actualizado_por}
+              value={formData.ACTUALIZADO_POR}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Ej: 00656"
@@ -294,7 +294,7 @@ const CrearPartidoPage = () => {
           <div className="pt-4">
             <button
               type="submit"
-              disabled={loading || !formData.c_campeonato || !formData.id_quiniela || !formData.c_equipo_1 || !formData.c_equipo_2 || !formData.id_grupo}
+              disabled={loading || !formData.C_CAMPEONATO || !formData.id_quiniela || !formData.EQUIPO_LOCAL || !formData.EQUIPO_VISITANTE || !formData.ID_GRUPO}
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               <Save className="h-4 w-4 mr-2" />
