@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // ✅ Login con almacenamiento de datos completos (CORREGIDO)
+  // ✅ Login con almacenamiento de datos completos
   const login = async (credentials) => {
     try {
       const data = await authService.login(credentials);
@@ -94,7 +94,6 @@ export const AuthProvider = ({ children }) => {
       console.log('=========================================');
       
       if (data.usuario) {
-        // ✅ Normalizar el objeto user para tener siempre las mismas propiedades
         const userData = {
           U_CODIGO: data.usuario.U_CODIGO || data.usuario.codigo || data.usuario.id,
           U_NOMBRE: data.usuario.U_NOMBRE || data.usuario.nombre,
@@ -108,8 +107,6 @@ export const AuthProvider = ({ children }) => {
         console.log('🔴 [AUTH] U_CODIGO guardado:', userData.U_CODIGO);
         
         setUser(userData);
-        
-        // ✅ Guardar también en sessionStorage para respaldo
         sessionStorage.setItem('user', JSON.stringify(userData));
         
         scheduleTokenRefresh();
@@ -121,10 +118,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ Función register
+  // ✅ Función register - CORREGIDA con valores por defecto
   const register = async (userData) => {
-    const response = await api.post('/api/usuarios/register', userData);
-    return response.data;
+    try {
+      // ✅ Agregar campos por defecto si no vienen
+      const dataToSend = {
+        U_CODIGO: userData.U_CODIGO,
+        U_NOMBRE: userData.U_NOMBRE,
+        U_APELLIDO: userData.U_APELLIDO,
+        U_CORREO: userData.U_CORREO,
+        U_PASSWORD: userData.U_PASSWORD,
+        U_ROL: userData.U_ROL || 'USUARIO',
+        U_ESTADO: userData.U_ESTADO || 'ACTIVO'
+      };
+      
+      console.log('=========================================');
+      console.log('🔴 [AUTH REGISTER] Enviando al backend:');
+      console.log('   - dataToSend:', dataToSend);
+      console.log('=========================================');
+      
+      const response = await api.post('/api/usuarios/register', dataToSend);
+      return response.data;
+    } catch (error) {
+      console.error('❌ [AUTH REGISTER] Error:', error.response?.data);
+      throw error;
+    }
   };
 
   // ✅ Logout con limpieza completa
