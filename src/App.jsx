@@ -195,7 +195,7 @@ function SocketManager() {
     }
     
     const datosEnvio = {
-      u_codigo: String(uCodigo).trim(),
+      U_CODIGO: String(uCodigo).trim(),
       nombre: nombre
     };
     
