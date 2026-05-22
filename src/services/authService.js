@@ -15,7 +15,7 @@ const isTokenExpired = (token) => {
     const expired = Date.now() >= exp;
     
     if (expired) {
-      //console.log('Token expirado:', new Date(exp), 'vs ahora:', new Date());
+      ////console.log('Token expirado:', new Date(exp), 'vs ahora:', new Date());
     }
     return expired;
   } catch (error) {
@@ -74,7 +74,7 @@ export const authService = {
     
     // ✅ Si no hay refresh token, no intentar refrescar
     if (!refreshToken) {
-      //console.log('No hay refresh token disponible');
+      ////console.log('No hay refresh token disponible');
       throw new Error('No refresh token - debe iniciar sesión');
     }
     
@@ -89,7 +89,7 @@ export const authService = {
         // ✅ Programar próximo refresh después de renovar
         scheduleTokenRefresh();
         
-        //console.log('Token renovado exitosamente');
+        ////console.log('Token renovado exitosamente');
         return newToken;
       }
       throw new Error('No se recibió nuevo token');
@@ -108,7 +108,7 @@ export const authService = {
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(USER_KEY);
     delete api.defaults.headers.common['Authorization'];
-    //console.log('Sesión cerrada correctamente');
+    ////console.log('Sesión cerrada correctamente');
   },
 
   getCurrentUser: () => {
@@ -116,7 +116,7 @@ export const authService = {
     const token = sessionStorage.getItem(TOKEN_KEY);
     
     if (token && isTokenExpired(token)) {
-      //console.log('Token expirado al obtener usuario, cerrando sesión');
+      ////console.log('Token expirado al obtener usuario, cerrando sesión');
       this.logout();
       return null;
     }
