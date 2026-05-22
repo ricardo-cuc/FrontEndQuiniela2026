@@ -5,22 +5,22 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const QuinielasPorCampeonatoPage = () => {
-  const { c_campeonato } = useParams();
+  const { C_CAMPEONATO } = useParams();
   const [campeonato, setCampeonato] = useState(null);
   const [quinielas, setQuinielas] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     cargarDatos();
-  }, [c_campeonato]);
+  }, [C_CAMPEONATO]);
 
   const cargarDatos = async () => {
     try {
       const campeonatosRes = await api.get('/api/admin/campeonatos');
-      const campeonatoEncontrado = campeonatosRes.data.data?.find(c => c.C_CAMPEONATO === c_campeonato);
+      const campeonatoEncontrado = campeonatosRes.data.data?.find(c => c.C_CAMPEONATO === C_CAMPEONATO);
       setCampeonato(campeonatoEncontrado);
 
-      const quinielasRes = await api.get(`/api/admin/campeonatos/${c_campeonato}/quinielas`);
+      const quinielasRes = await api.get(`/api/admin/campeonatos/${C_CAMPEONATO}/quinielas`);
       setQuinielas(quinielasRes.data.data || []);
     } catch (error) {
       toast.error('Error al cargar datos');
@@ -72,8 +72,8 @@ const QuinielasPorCampeonatoPage = () => {
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{campeonato?.N_CAMPEONATO || c_campeonato}</h1>
-            <p className="mt-2">Código: {c_campeonato}</p>
+            <h1 className="text-2xl font-bold">{campeonato?.N_CAMPEONATO || C_CAMPEONATO}</h1>
+            <p className="mt-2">Código: {C_CAMPEONATO}</p>
           </div>
           <Trophy className="h-12 w-12 opacity-50" />
         </div>
