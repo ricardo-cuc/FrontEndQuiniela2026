@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { authService } from './authService';
 
-// DEBUG
-console.log('API URL:', import.meta.env.VITE_API);
+
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API,
