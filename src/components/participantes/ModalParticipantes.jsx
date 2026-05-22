@@ -74,7 +74,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const [showParticipantesDrawer, setShowParticipantesDrawer] = useState(false);
   const [screenSize, setScreenSize] = useState('desktop');
   
-  // Estados para mensajes
   const [mensajeRespondiendo, setMensajeRespondiendo] = useState(null);
   const [showReaccionesMensaje, setShowReaccionesMensaje] = useState(null);
   const [respuestaTexto, setRespuestaTexto] = useState('');
@@ -85,7 +84,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const typingTimeoutRef = useRef(null);
   const recentEmojis = getRecentEmojis();
 
-  // Detectar tamaño de pantalla
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
@@ -316,7 +314,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Enviar reacción a un participante
   const enviarReaccionParticipante = async (receptorId, emoji) => {
     if (showEmojis === 'enviando') return;
     
@@ -332,7 +329,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       toast.success(`Reacción ${emoji.emoji} enviada`, { duration: 1500 });
       setShowEmojis(null);
       
-      // Recargar participantes para mostrar la nueva reacción
       const participantesRes = await api.get(`/api/quinielas/${quinielaId}/participantes`);
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
         ...p,
@@ -348,7 +344,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Enviar reacción a un mensaje
   const enviarReaccionMensaje = async (mensajeId, emoji) => {
     try {
       await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeId}/reacciones`, {
@@ -365,7 +360,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Enviar respuesta a un mensaje
   const enviarRespuestaMensaje = async () => {
     if (!respuestaTexto.trim() || !mensajeRespondiendo) return;
     
@@ -385,13 +379,12 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // Renderizar mensaje individual
   const renderMensaje = (msg) => {
     const esRespondiendo = mensajeRespondiendo?.ID_MENSAJE === msg.ID_MENSAJE;
     
     return (
       <div key={msg.ID_MENSAJE} className="mb-3">
-        <div className="bg-gray-100 rounded-xl px-4 py-2 max-w-[85%]">
+        <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 max-w-[720px]">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs font-semibold text-indigo-600">
               {msg.U_NOMBRE} {msg.U_APELLIDO}
@@ -415,14 +408,15 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
           </div>
           
-          <p className="text-sm text-gray-700 break-words mt-1">{msg.MENSAJE}</p>
+          <p className="text-sm text-gray-700 break-words mt-2 leading-relaxed">
+            {msg.MENSAJE}
+          </p>
           
           <p className="text-xs text-gray-400 mt-1">
             {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
         
-        {/* Selector de emojis para reaccionar al mensaje */}
         {showReaccionesMensaje === msg.ID_MENSAJE && (
           <div className="mt-1 ml-4 bg-white rounded-lg shadow-xl border border-gray-200 p-2 inline-block">
             <div className="grid grid-cols-6 gap-1">
@@ -440,7 +434,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           </div>
         )}
         
-        {/* Input para responder al mensaje */}
         {esRespondiendo && (
           <div className="mt-2 ml-8 pl-3 border-l-2 border-indigo-300">
             <div className="bg-indigo-50 rounded-lg p-2">
@@ -481,7 +474,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     );
   };
 
-  // Renderizar lista de participantes
   const renderParticipantesList = () => (
     <div className="space-y-2">
       {loading ? (
@@ -560,51 +552,56 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm">
-      <div className={`bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto overflow-hidden flex flex-col
-        ${isMobile ? 'max-w-full' : isTablet ? 'max-w-4xl' : 'max-w-6xl'}
-      `}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/60">
+      <div
+        className={`bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-[90vh] overflow-hidden flex flex-col
+        ${isMobile ? 'max-w-full' : isTablet ? 'max-w-4xl' : 'max-w-5xl'}
+        `}
+        style={{
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+          transform: 'translateZ(0)'
+        }}
+      >
         
-        {/* Header - Siempre visible */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-          <div className="flex items-center gap-3">
-            {(isMobile || isTablet) && (
-              <button
-                onClick={() => setShowParticipantesDrawer(true)}
-                className="text-white/70 hover:text-white relative"
-              >
-                <Users className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {participantes.length}
-                </span>
-              </button>
-            )}
-            <div>
-              <h2 className="text-lg font-bold">Chat en vivo</h2>
-              <p className="text-xs text-indigo-200 truncate max-w-[180px]">{quinielaNombre}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
-              {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              <span className="hidden sm:inline">{isConnected ? 'Conectado' : 'Desconectado'}</span>
-            </div>
-            <button onClick={onClose} className="text-white/70 hover:text-white">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Layout principal - 2 columnas en desktop, 1 columna en móvil/tablet */}
         <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
           
-          {/* Columna del Chat (izquierda) */}
-          <div className={`flex flex-col overflow-hidden ${isDesktop ? 'md:w-2/3 lg:w-3/4' : 'flex-1'}`}>
-            
+          {/* Columna del Chat */}
+          <div className={`flex flex-col overflow-hidden ${isDesktop ? 'md:w-[65%]' : 'flex-1'}`}>
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-indigo-600 text-white">
+              <div className="flex items-center gap-3">
+                {(isMobile || isTablet) && (
+                  <button
+                    onClick={() => setShowParticipantesDrawer(true)}
+                    className="text-white/70 hover:text-white relative"
+                  >
+                    <Users className="h-5 w-5" />
+                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {participantes.length}
+                    </span>
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold">Chat en vivo</h2>
+                  <p className="text-xs text-indigo-200 truncate max-w-[180px]">{quinielaNombre}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
+                  {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{isConnected ? 'Conectado' : 'Desconectado'}</span>
+                </div>
+                <button onClick={onClose} className="text-white/70 hover:text-white">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
             {/* Área de mensajes */}
             <div 
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-3"
+              className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"
               onScroll={handleScroll}
               tabIndex={0}
             >
@@ -653,7 +650,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
 
             {/* Input de mensaje */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="p-4 border-t border-gray-200 bg-white">
               <div className="flex gap-2">
                 <button
                   onClick={() => setAutoScroll(!autoScroll)}
@@ -671,13 +668,13 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()}
                   placeholder="Escribe un mensaje..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                   autoFocus
                 />
                 <button
                   onClick={enviarMensaje}
                   disabled={!nuevoMensaje.trim() || enviando}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
+                  className="bg-indigo-600 text-white px-4 py-3 rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
                 </button>
@@ -688,16 +685,14 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
           </div>
 
-          {/* Panel de Participantes - DENTRO del modal para desktop (siempre visible y enfocado) */}
+          {/* Panel de Participantes Desktop */}
           {isDesktop && (
-            <div className="md:w-1/3 lg:w-1/4 bg-white border-l border-gray-200 overflow-hidden flex flex-col">
-              {/* Header del panel */}
-              <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+            <div className="md:w-[35%] bg-white border-l border-gray-200 overflow-hidden flex flex-col">
+              <div className="p-4 bg-indigo-600 text-white">
                 <h3 className="font-bold">Participantes</h3>
                 <p className="text-sm text-indigo-200">{participantes.length} personas</p>
               </div>
 
-              {/* Buscador */}
               <div className="p-3 border-b border-gray-200 bg-gray-50">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -711,7 +706,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 </div>
               </div>
 
-              {/* Lista de participantes */}
               <div className="flex-1 overflow-y-auto p-3">
                 {renderParticipantesList()}
               </div>
@@ -731,7 +725,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           <div className={`fixed top-0 left-0 bottom-0 w-11/12 max-w-sm bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out flex flex-col
             ${showParticipantesDrawer ? 'translate-x-0' : '-translate-x-full'}
           `}>
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-indigo-600 text-white">
               <div>
                 <h3 className="font-bold">Participantes</h3>
                 <p className="text-xs text-indigo-200">{participantes.length} personas</p>
