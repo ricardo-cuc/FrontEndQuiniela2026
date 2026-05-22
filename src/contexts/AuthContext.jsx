@@ -16,9 +16,8 @@ export const AuthProvider = ({ children }) => {
   const isTokenExpired = (token) => {
     if (!token) return true;
     try {
-      // Decodificar el token JWT
       const payload = JSON.parse(atob(token.split('.')[1]));
-      const exp = payload.exp * 1000; // Convertir a milisegundos
+      const exp = payload.exp * 1000;
       return Date.now() >= exp;
     } catch (error) {
       console.error('Error al verificar token:', error);
@@ -42,14 +41,13 @@ export const AuthProvider = ({ children }) => {
   // ✅ Inicialización con verificación de expiración
   useEffect(() => {
     const init = () => {
-      // Verificar si la sesión expiró
       const sessionExpired = clearExpiredSession();
       
       if (!sessionExpired) {
         const currentUser = authService.getCurrentUser();
         if (currentUser) {
+          console.log('🔴 [AUTH] Usuario cargado de sessionStorage:', currentUser);
           setUser(currentUser);
-          // ✅ Programar refresh automático si hay usuario
           scheduleTokenRefresh();
         } else {
           setUser(null);
@@ -61,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     init();
   }, []);
 
-  // ✅ Verificar expiración periódicamente (cada minuto)
+  // ✅ Verificar expiración periódicamente
   useEffect(() => {
     const checkSessionExpiration = () => {
       const token = sessionStorage.getItem('token');
@@ -70,15 +68,11 @@ export const AuthProvider = ({ children }) => {
         authService.logout();
         clearTokenSchedule();
         setUser(null);
-        // Disparar evento personalizado para que otros componentes reaccionen
         window.dispatchEvent(new CustomEvent('sessionExpired'));
       }
     };
 
-    // Verificar cada 60 segundos
     const interval = setInterval(checkSessionExpiration, 60000);
-    
-    // También verificar cuando la ventana recupera el foco
     window.addEventListener('focus', checkSessionExpiration);
     
     return () => {
@@ -87,22 +81,37 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // ✅ Login con almacenamiento de datos completos
+  // ✅ Login con almacenamiento de datos completos (CORREGIDO)
   const login = async (credentials) => {
     try {
       const data = await authService.login(credentials);
       
-      // Verificar que los datos del usuario sean completos
+      console.log('=========================================');
+      console.log('🔴 [AUTH] Respuesta del login:');
+      console.log('   - data completo:', data);
+      console.log('   - data.usuario:', data.usuario);
+      console.log('   - Propiedades de data.usuario:', Object.keys(data.usuario || {}));
+      console.log('=========================================');
+      
       if (data.usuario) {
-        // Asegurar que el email no sea null/undefined
+        // ✅ Normalizar el objeto user para tener siempre las mismas propiedades
         const userData = {
-          ...data.usuario,
-          U_EMAIL: data.usuario.U_EMAIL || data.usuario.email || null
+          U_CODIGO: data.usuario.U_CODIGO || data.usuario.codigo || data.usuario.id,
+          U_NOMBRE: data.usuario.U_NOMBRE || data.usuario.nombre,
+          U_APELLIDO: data.usuario.U_APELLIDO || data.usuario.apellido,
+          U_CORREO: data.usuario.U_CORREO || data.usuario.email || data.usuario.U_EMAIL,
+          U_EMAIL: data.usuario.U_EMAIL || data.usuario.email || data.usuario.U_CORREO,
+          U_ROL: data.usuario.U_ROL || data.usuario.rol,
         };
+        
+        console.log('🔴 [AUTH] userData normalizado a guardar:', userData);
+        console.log('🔴 [AUTH] U_CODIGO guardado:', userData.U_CODIGO);
+        
         setUser(userData);
         
-        // ✅ El scheduleTokenRefresh ya se llama dentro de authService.login()
-        // pero lo llamamos nuevamente por si acaso
+        // ✅ Guardar también en sessionStorage para respaldo
+        sessionStorage.setItem('user', JSON.stringify(userData));
+        
         scheduleTokenRefresh();
       }
       return data;
@@ -120,15 +129,14 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ Logout con limpieza completa
   const logout = () => {
-    clearTokenSchedule(); // Limpiar scheduler programado
+    clearTokenSchedule();
     authService.logout();
     setUser(null);
   };
 
-  // ✅ Verificar autenticación con expiración
+  // ✅ Verificar autenticación
   const isAuthenticated = useMemo(() => {
     if (!user) return false;
-    // Verificar token nuevamente
     const token = sessionStorage.getItem('token');
     return !!token && !isTokenExpired(token);
   }, [user]);
