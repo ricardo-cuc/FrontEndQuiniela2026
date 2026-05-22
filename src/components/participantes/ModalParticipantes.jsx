@@ -565,40 +565,42 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         ${isMobile ? 'max-w-full' : isTablet ? 'max-w-4xl' : 'max-w-6xl'}
       `}>
         
+        {/* Header - Siempre visible */}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+          <div className="flex items-center gap-3">
+            {(isMobile || isTablet) && (
+              <button
+                onClick={() => setShowParticipantesDrawer(true)}
+                className="text-white/70 hover:text-white relative"
+              >
+                <Users className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {participantes.length}
+                </span>
+              </button>
+            )}
+            <div>
+              <h2 className="text-lg font-bold">Chat en vivo</h2>
+              <p className="text-xs text-indigo-200 truncate max-w-[180px]">{quinielaNombre}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
+              {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+              <span className="hidden sm:inline">{isConnected ? 'Conectado' : 'Desconectado'}</span>
+            </div>
+            <button onClick={onClose} className="text-white/70 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Layout principal - 2 columnas en desktop, 1 columna en móvil/tablet */}
         <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
           
-          {/* Columna del Chat */}
-          <div className={`flex flex-col overflow-hidden ${isDesktop ? 'md:w-3/4' : 'flex-1'}`}>
-            {/* Header */}
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-              <div className="flex items-center gap-3">
-                {(isMobile || isTablet) && (
-                  <button
-                    onClick={() => setShowParticipantesDrawer(true)}
-                    className="text-white/70 hover:text-white relative"
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                      {participantes.length}
-                    </span>
-                  </button>
-                )}
-                <div>
-                  <h2 className="text-lg font-bold">Chat en vivo</h2>
-                  <p className="text-xs text-indigo-200 truncate max-w-[180px]">{quinielaNombre}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`flex items-center gap-1 text-xs ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
-                  {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                  <span className="hidden sm:inline">{isConnected ? 'Conectado' : 'Desconectado'}</span>
-                </div>
-                <button onClick={onClose} className="text-white/70 hover:text-white">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
+          {/* Columna del Chat (izquierda) */}
+          <div className={`flex flex-col overflow-hidden ${isDesktop ? 'md:w-2/3 lg:w-3/4' : 'flex-1'}`}>
+            
             {/* Área de mensajes */}
             <div 
               ref={messagesContainerRef}
@@ -686,14 +688,16 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
           </div>
 
-          {/* Panel de Participantes Desktop */}
+          {/* Panel de Participantes - DENTRO del modal para desktop (siempre visible y enfocado) */}
           {isDesktop && (
-            <div className="md:w-1/4 bg-white border-l border-gray-200 overflow-hidden flex flex-col">
+            <div className="md:w-1/3 lg:w-1/4 bg-white border-l border-gray-200 overflow-hidden flex flex-col">
+              {/* Header del panel */}
               <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                 <h3 className="font-bold">Participantes</h3>
                 <p className="text-sm text-indigo-200">{participantes.length} personas</p>
               </div>
 
+              {/* Buscador */}
               <div className="p-3 border-b border-gray-200 bg-gray-50">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -707,6 +711,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
                 </div>
               </div>
 
+              {/* Lista de participantes */}
               <div className="flex-1 overflow-y-auto p-3">
                 {renderParticipantesList()}
               </div>
