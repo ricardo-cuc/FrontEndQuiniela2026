@@ -26,7 +26,7 @@ export const usePresencia = () => {
         const user = JSON.parse(sessionStorage.getItem('user') || '{}');
         if (user.U_CODIGO) {
           newSocket.emit('registrar-usuario', {
-            u_codigo: user.U_CODIGO,
+            U_CODIGO: user.U_CODIGO,
             nombre: `${user.U_NOMBRE} ${user.U_APELLIDO}`
           });
         }
