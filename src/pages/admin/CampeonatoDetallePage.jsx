@@ -5,7 +5,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const CampeonatoDetallePage = () => {
-  const { c_campeonato } = useParams();
+  const { C_CAMPEONATO } = useParams();
   const navigate = useNavigate();
   const [campeonato, setCampeonato] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,12 +19,12 @@ const CampeonatoDetallePage = () => {
     cargarCampeonato();
     cargarQuinielas();
     cargarPartidos();
-  }, [c_campeonato]);
+  }, [C_CAMPEONATO]);
 
   const cargarCampeonato = async () => {
     try {
       const response = await api.get('/api/admin/campeonatos');
-      const encontrado = response.data.data?.find(c => c.C_CAMPEONATO === c_campeonato);
+      const encontrado = response.data.data?.find(c => c.C_CAMPEONATO === C_CAMPEONATO);
       setCampeonato(encontrado);
     } catch (error) {
       toast.error('Error al cargar campeonato');
@@ -33,7 +33,7 @@ const CampeonatoDetallePage = () => {
 
   const cargarQuinielas = async () => {
     try {
-      const response = await api.get(`/api/admin/campeonatos/${c_campeonato}/quinielas`);
+      const response = await api.get(`/api/admin/campeonatos/${C_CAMPEONATO}/quinielas`);
       setQuinielas(response.data.data || []);
     } catch (error) {
       //console.error('Error al cargar quinielas', error);
@@ -42,7 +42,7 @@ const CampeonatoDetallePage = () => {
 
   const cargarPartidos = async () => {
     try {
-      const response = await api.get(`/api/partidos/campeonato/${c_campeonato}`);
+      const response = await api.get(`/api/partidos/campeonato/${C_CAMPEONATO}`);
       setPartidos(response.data.data || []);
     } catch (error) {
       //console.error('Error al cargar partidos', error);
@@ -121,8 +121,8 @@ const CampeonatoDetallePage = () => {
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{campeonato?.N_CAMPEONATO || c_campeonato}</h1>
-            <p className="mt-2 text-indigo-100">Código: {c_campeonato}</p>
+            <h1 className="text-2xl font-bold">{campeonato?.N_CAMPEONATO || C_CAMPEONATO}</h1>
+            <p className="mt-2 text-indigo-100">Código: {C_CAMPEONATO}</p>
           </div>
           <Trophy className="h-16 w-16 opacity-30" />
         </div>
