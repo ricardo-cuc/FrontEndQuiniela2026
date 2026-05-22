@@ -88,7 +88,7 @@ const UsuariosActivos = () => {
           usuarios.map((usuario, index) => (
             <div key={index} className="flex items-center justify-between text-sm border-b pb-2">
               <span className="font-medium">{usuario.nombre}</span>
-              <span className="text-gray-400 text-xs">{usuario.u_codigo}</span>
+              <span className="text-gray-400 text-xs">{usuario.U_CODIGO}</span>
             </div>
           ))
         )}
