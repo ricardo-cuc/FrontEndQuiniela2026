@@ -27,7 +27,7 @@ const MisQuinielasPage = () => {
   // Efecto para escuchar mensajes en tiempo real
   useEffect(() => {
     if (lastMessage && !isUpdatingRef.current) {
-      console.log('📡 Evento recibido en MisQuinielasPage:', lastMessage);
+      //console.log('📡 Evento recibido en MisQuinielasPage:', lastMessage);
       
       isUpdatingRef.current = true;
       
