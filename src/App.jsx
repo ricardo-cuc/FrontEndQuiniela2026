@@ -373,8 +373,8 @@ function AppRoutes() {
         <Route path="/quinielas/:id/pronosticos" element={<PrivateRoute><PrivateLayout><PronosticosQuinielaPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/admin" element={<AdminRoute><PrivateLayout><AdminPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/campeonatos" element={<AdminRoute><PrivateLayout><CampeonatosPage /></PrivateLayout></AdminRoute>} />
-        <Route path="/admin/campeonatos/:c_campeonato" element={<AdminRoute><PrivateLayout><CampeonatoDetallePage /></PrivateLayout></AdminRoute>} />
-        <Route path="/admin/campeonatos/:c_campeonato/quinielas" element={<AdminRoute><PrivateLayout><QuinielasPorCampeonatoPage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/campeonatos/:C_CAMPEONATO" element={<AdminRoute><PrivateLayout><CampeonatoDetallePage /></PrivateLayout></AdminRoute>} />
+        <Route path="/admin/campeonatos/:C_CAMPEONATO/quinielas" element={<AdminRoute><PrivateLayout><QuinielasPorCampeonatoPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/crear-quiniela" element={<AdminRoute><PrivateLayout><CrearQuinielaPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/quinielas/:id" element={<AdminRoute><PrivateLayout><QuinielaDetallePage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/crear-equipo" element={<AdminRoute><PrivateLayout><CrearEquipoPage /></PrivateLayout></AdminRoute>} />
