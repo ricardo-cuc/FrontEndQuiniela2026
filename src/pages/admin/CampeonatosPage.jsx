@@ -9,7 +9,7 @@ const CampeonatosPage = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    c_campeonato: '',
+    C_CAMPEONATO: '',
     n_campeonato: '',
     q_partidos: '',
     r_partidos: ''
@@ -41,21 +41,21 @@ const CampeonatosPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (formData.c_campeonato.length !== 3) {
+    if (formData.C_CAMPEONATO.length !== 3) {
       toast.error('El código del campeonato debe tener exactamente 3 caracteres');
       return;
     }
 
     try {
       await api.post('/api/admin/campeonatos', {
-        c_campeonato: formData.c_campeonato.toUpperCase(),
+        C_CAMPEONATO: formData.C_CAMPEONATO.toUpperCase(),
         n_campeonato: formData.n_campeonato,
         q_partidos: formData.q_partidos ? parseInt(formData.q_partidos) : null,
         r_partidos: formData.r_partidos ? parseInt(formData.r_partidos) : null
       });
       toast.success('Campeonato creado exitosamente');
       setShowModal(false);
-      setFormData({ c_campeonato: '', n_campeonato: '', q_partidos: '', r_partidos: '' });
+      setFormData({ C_CAMPEONATO: '', n_campeonato: '', q_partidos: '', r_partidos: '' });
       cargarCampeonatos();
     } catch (error) {
       toast.error(error.response?.data?.mensaje || 'Error al crear campeonato');
@@ -149,10 +149,10 @@ const CampeonatosPage = () => {
                 </label>
                 <input
                   type="text"
-                  name="c_campeonato"
+                  name="C_CAMPEONATO"
                   required
                   maxLength={3}
-                  value={formData.c_campeonato}
+                  value={formData.C_CAMPEONATO}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 uppercase"
                   placeholder="Ej: LGN, M26"
