@@ -26,11 +26,11 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [formData, setFormData] = useState({
-    u_codigo: '',
-    u_nombre: '',
-    u_apellido: '',
-    u_correo: '',
-    u_password: '',
+    U_CODIGO: '',
+    U_NOMBRE: '',
+    U_APELLIDO: '',
+    U_CORREO: '',
+    U_PASSWORD: '',
     confirmPassword: '',
   });
 
@@ -68,7 +68,7 @@ const Register = () => {
       [name]: value,
     });
 
-    if (name === 'u_password') {
+    if (name === 'U_PASSWORD') {
       let strength = 0;
       if (value.length >= 6) strength++;
       if (value.match(/[a-z]/) && value.match(/[A-Z]/)) strength++;
@@ -99,17 +99,17 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (formData.u_password !== formData.confirmPassword) {
+    if (formData.U_PASSWORD !== formData.confirmPassword) {
       toast.error('Las contraseñas no coinciden');
       return;
     }
 
-    if (formData.u_codigo.length !== 5) {
+    if (formData.U_CODIGO.length !== 5) {
       toast.error('El código de usuario debe tener exactamente 5 caracteres');
       return;
     }
 
-    if (formData.u_password.length < 6) {
+    if (formData.U_PASSWORD.length < 6) {
       toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
     }
@@ -270,11 +270,11 @@ const Register = () => {
                     Código de usuario
                   </label>
                   <input
-                    name="u_codigo"
+                    name="U_CODIGO"
                     type="text"
                     required
                     maxLength={5}
-                    value={formData.u_codigo}
+                    value={formData.U_CODIGO}
                     onChange={handleChange}
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                     placeholder="Ej: U0001"
@@ -291,10 +291,10 @@ const Register = () => {
                     <div className="relative">
                       <User className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                       <input
-                        name="u_nombre"
+                        name="U_NOMBRE"
                         type="text"
                         required
-                        value={formData.u_nombre}
+                        value={formData.U_NOMBRE}
                         onChange={handleChange}
                         className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                         placeholder="Nombre"
@@ -308,10 +308,10 @@ const Register = () => {
                     <div className="relative">
                       <User className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                       <input
-                        name="u_apellido"
+                        name="U_APELLIDO"
                         type="text"
                         required
-                        value={formData.u_apellido}
+                        value={formData.U_APELLIDO}
                         onChange={handleChange}
                         className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                         placeholder="Apellido"
@@ -328,10 +328,10 @@ const Register = () => {
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
-                      name="u_correo"
+                      name="U_CORREO"
                       type="email"
                       required
-                      value={formData.u_correo}
+                      value={formData.U_CORREO}
                       onChange={handleChange}
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                       placeholder="correo@ejemplo.com"
@@ -347,10 +347,10 @@ const Register = () => {
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
-                      name="u_password"
+                      name="U_PASSWORD"
                       type={showPassword ? 'text' : 'password'}
                       required
-                      value={formData.u_password}
+                      value={formData.U_PASSWORD}
                       onChange={handleChange}
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-12 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                       placeholder="Mínimo 6 caracteres"
@@ -363,7 +363,7 @@ const Register = () => {
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
-                  {formData.u_password && (
+                  {formData.U_PASSWORD && (
                     <div className="mt-2">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -399,13 +399,13 @@ const Register = () => {
                       {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
-                  {formData.confirmPassword && formData.u_password !== formData.confirmPassword && (
+                  {formData.confirmPassword && formData.U_PASSWORD !== formData.confirmPassword && (
                     <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       Las contraseñas no coinciden
                     </p>
                   )}
-                  {formData.confirmPassword && formData.u_password === formData.confirmPassword && formData.u_password && (
+                  {formData.confirmPassword && formData.U_PASSWORD === formData.confirmPassword && formData.U_PASSWORD && (
                     <p className="mt-1 text-xs text-green-500 flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
                       Las contraseñas coinciden
