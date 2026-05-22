@@ -11,7 +11,7 @@ const CrearGrupoPage = () => {
   const [quinielas, setQuinielas] = useState([]);
   const [formData, setFormData] = useState({
     nombre: '',
-    c_campeonato: '',
+    C_CAMPEONATO: '',
     id_quiniela: ''
   });
 
@@ -22,12 +22,12 @@ const CrearGrupoPage = () => {
 
   // Cargar quinielas cuando cambia el campeonato
   useEffect(() => {
-    if (formData.c_campeonato) {
-      cargarQuinielasPorCampeonato(formData.c_campeonato);
+    if (formData.C_CAMPEONATO) {
+      cargarQuinielasPorCampeonato(formData.C_CAMPEONATO);
     } else {
       setQuinielas([]);
     }
-  }, [formData.c_campeonato]);
+  }, [formData.C_CAMPEONATO]);
 
   const cargarCampeonatos = async () => {
     try {
@@ -39,9 +39,9 @@ const CrearGrupoPage = () => {
     }
   };
 
-  const cargarQuinielasPorCampeonato = async (c_campeonato) => {
+  const cargarQuinielasPorCampeonato = async (C_CAMPEONATO) => {
     try {
-      const response = await api.get(`/api/admin/campeonatos/${c_campeonato}/quinielas`);
+      const response = await api.get(`/api/admin/campeonatos/${C_CAMPEONATO}/quinielas`);
       setQuinielas(response.data.data || []);
     } catch (error) {
       toast.error('Error al cargar quinielas');
@@ -64,7 +64,7 @@ const CrearGrupoPage = () => {
       // 🔥 CORREGIDO: Usar /api/grupos en lugar de /api/admin/grupos
       await api.post('/api/grupos', {
         nombre: formData.nombre,
-        c_campeonato: formData.c_campeonato,
+        C_CAMPEONATO: formData.C_CAMPEONATO,
         id_quiniela: parseInt(formData.id_quiniela)
       });
       toast.success('Grupo creado exitosamente');
@@ -107,9 +107,9 @@ const CrearGrupoPage = () => {
               Campeonato *
             </label>
             <select
-              name="c_campeonato"
+              name="C_CAMPEONATO"
               required
-              value={formData.c_campeonato}
+              value={formData.C_CAMPEONATO}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             >
@@ -136,7 +136,7 @@ const CrearGrupoPage = () => {
               required
               value={formData.id_quiniela}
               onChange={handleChange}
-              disabled={!formData.c_campeonato}
+              disabled={!formData.C_CAMPEONATO}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="">Selecciona una quiniela</option>
@@ -146,7 +146,7 @@ const CrearGrupoPage = () => {
                 </option>
               ))}
             </select>
-            {formData.c_campeonato && quinielas.length === 0 && (
+            {formData.C_CAMPEONATO && quinielas.length === 0 && (
               <p className="text-xs text-red-500 mt-1">
                 No hay quinielas para este campeonato. Crea una primero.
               </p>
@@ -156,7 +156,7 @@ const CrearGrupoPage = () => {
           <div className="pt-4">
             <button
               type="submit"
-              disabled={loading || !formData.c_campeonato || !formData.id_quiniela}
+              disabled={loading || !formData.C_CAMPEONATO || !formData.id_quiniela}
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-4 w-4 mr-2" />
