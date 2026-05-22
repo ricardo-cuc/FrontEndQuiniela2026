@@ -8,7 +8,7 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Navbar from './components/common/Navbar';
 import { SocketStatus } from './components/SocketStatus';
-import { FloatingHelpWidget } from './components/help/FloatingHelpWidget'; // ✅ IMPORTACIÓN CORRECTA
+import { FloatingHelpWidget } from './components/help/FloatingHelpWidget';
 
 import HomePage from './pages/HomePage';
 import QuinielasPage from './pages/QuinielasPage';
@@ -140,7 +140,7 @@ function SessionMonitor() {
 }
 
 // ============================================
-// 🌐 SOCKET MANAGER UNIFICADO
+// 🌐 SOCKET MANAGER UNIFICADO (CORREGIDO)
 // ============================================
 function SocketManager() {
   const { isAuthenticated, user } = useAuth();
@@ -149,22 +149,89 @@ function SocketManager() {
   const MAX_RECONNECT_ATTEMPTS = 10;
 
   const registerUserPresence = () => {
-    if (!globalSocket?.connected || !isAuthenticated || !user?.U_CODIGO) return;
-    if (isRegisteredRef.current) return;
+    // Verificar conexión del socket
+    if (!globalSocket?.connected) {
+      console.log('❌ [SOCKET] No conectado');
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      console.log('❌ [SOCKET] Usuario no autenticado');
+      return;
+    }
+    
+    if (isRegisteredRef.current) {
+      console.log('⚠️ [SOCKET] Ya registrado, omitiendo');
+      return;
+    }
 
-    console.log('📝 Registrando usuario en presencia:', user.U_CODIGO);
-    globalSocket.emit('registrar-usuario', {
-      u_codigo: user.U_CODIGO,
-      nombre: `${user.U_NOMBRE || ''} ${user.U_APELLIDO || ''}`.trim() || user.U_CORREO
-    });
+    // ✅ Obtener usuario del sessionStorage como fallback
+    let userData = user;
+    if (!userData || !userData.U_CODIGO) {
+      const storedUser = sessionStorage.getItem('user');
+      if (storedUser) {
+        try {
+          userData = JSON.parse(storedUser);
+          console.log('📝 [SOCKET] Usuario obtenido de sessionStorage:', userData);
+        } catch (e) {
+          console.error('❌ [SOCKET] Error parsing sessionStorage user:', e);
+        }
+      }
+    }
+    
+    const uCodigo = userData?.U_CODIGO;
+    const nombre = `${userData?.U_NOMBRE || ''} ${userData?.U_APELLIDO || ''}`.trim() || userData?.U_CORREO || 'Usuario';
+    
+    console.log('=========================================');
+    console.log('🔴 [SOCKET] REGISTRANDO USUARIO:');
+    console.log('   - userData:', userData);
+    console.log('   - uCodigo encontrado:', uCodigo);
+    console.log('   - nombreCompleto:', nombre);
+    console.log('=========================================');
+    
+    if (!uCodigo) {
+      console.error('❌ [SOCKET] No se puede registrar: U_CODIGO es undefined');
+      return;
+    }
+    
+    const datosEnvio = {
+      u_codigo: String(uCodigo).trim(),
+      nombre: nombre
+    };
+    
+    console.log('📤 [SOCKET] Enviando al servidor:', datosEnvio);
+    
+    globalSocket.emit('registrar-usuario', datosEnvio);
     isRegisteredRef.current = true;
+    
+    console.log('✅ [SOCKET] Evento registrar-usuario enviado');
   };
 
   const setupSocket = () => {
-    if (!isAuthenticated || !user?.U_CODIGO) return;
+    if (!isAuthenticated) {
+      console.log('❌ [SOCKET] No autenticado, no se crea socket');
+      return;
+    }
+    
+    // Verificar si tenemos un código de usuario válido
+    let userCodigo = user?.U_CODIGO;
+    if (!userCodigo) {
+      const storedUser = sessionStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          userCodigo = parsed.U_CODIGO;
+        } catch (e) {}
+      }
+    }
+    
+    if (!userCodigo) {
+      console.log('❌ [SOCKET] No hay U_CODIGO, esperando...');
+      return;
+    }
 
     if (globalSocket?.connected) {
-      console.log('✅ Usando socket existente');
+      console.log('✅ [SOCKET] Usando socket existente');
       registerUserPresence();
       return;
     }
@@ -174,7 +241,7 @@ function SocketManager() {
       globalSocket = null;
     }
 
-    console.log('🔌 Creando nueva conexión socket...');
+    console.log('🔌 [SOCKET] Creando nueva conexión socket...');
     globalSocket = io(API_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -192,29 +259,29 @@ function SocketManager() {
     });
 
     globalSocket.on('connect', () => {
-      console.log('✅ Socket conectado correctamente');
+      console.log('✅ [SOCKET] Socket conectado correctamente');
       reconnectAttempts.current = 0;
       isRegisteredRef.current = false;
       registerUserPresence();
     });
 
     globalSocket.on('reconnect', (attemptNumber) => {
-      console.log(`🔄 Socket reconectado después de ${attemptNumber} intentos`);
+      console.log(`🔄 [SOCKET] Reconectado después de ${attemptNumber} intentos`);
       isRegisteredRef.current = false;
       registerUserPresence();
     });
 
     globalSocket.on('reconnecting', (attemptNumber) => {
-      console.log(`🔄 Reconectando... Intento ${attemptNumber}`);
+      console.log(`🔄 [SOCKET] Reconectando... Intento ${attemptNumber}`);
     });
 
     globalSocket.on('connect_error', (error) => {
-      console.error('❌ Error de conexión:', error.message);
+      console.error('❌ [SOCKET] Error de conexión:', error.message);
       reconnectAttempts.current++;
     });
 
     globalSocket.on('disconnect', (reason) => {
-      console.log(`🔌 Socket desconectado: ${reason}`);
+      console.log(`🔌 [SOCKET] Desconectado: ${reason}`);
       isRegisteredRef.current = false;
       
       if (reason === 'io server disconnect') {
@@ -227,26 +294,26 @@ function SocketManager() {
     });
 
     globalSocket.on('sesion-duplicada', (data) => {
-      console.warn('⚠️ Sesión duplicada:', data);
+      console.warn('⚠️ [SOCKET] Sesión duplicada:', data);
       alert('⚠️ Tu sesión se ha abierto en otro dispositivo. Serás redirigido al login.');
       sessionStorage.clear();
       window.location.href = '/login';
     });
 
     globalSocket.on('usuario-conectado', (data) => {
-      console.log('👤 Usuario conectado:', data);
+      console.log('👤 [SOCKET] Usuario conectado:', data);
     });
 
     globalSocket.on('usuario-desconectado', (data) => {
-      console.log('👤 Usuario desconectado:', data);
+      console.log('👤 [SOCKET] Usuario desconectado:', data);
     });
   };
 
   useEffect(() => {
-    if (isAuthenticated && user?.U_CODIGO) {
+    if (isAuthenticated) {
       setupSocket();
     } else if (!isAuthenticated && globalSocket) {
-      console.log('🔌 Cerrando socket por logout');
+      console.log('🔌 [SOCKET] Cerrando socket por logout');
       globalSocket.disconnect();
       globalSocket = null;
       isRegisteredRef.current = false;
@@ -257,9 +324,9 @@ function SocketManager() {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && isAuthenticated && user?.U_CODIGO) {
+      if (!document.hidden && isAuthenticated) {
         if (!globalSocket?.connected) {
-          console.log('📱 Página visible, reconectando...');
+          console.log('📱 [SOCKET] Página visible, reconectando...');
           setupSocket();
         } else if (globalSocket?.connected && !isRegisteredRef.current) {
           registerUserPresence();
@@ -268,8 +335,8 @@ function SocketManager() {
     };
 
     const handleOnline = () => {
-      console.log('🌐 Red recuperada, reconectando...');
-      if (isAuthenticated && user?.U_CODIGO) {
+      console.log('🌐 [SOCKET] Red recuperada, reconectando...');
+      if (isAuthenticated) {
         setupSocket();
       }
     };
@@ -281,7 +348,7 @@ function SocketManager() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
     };
-  }, [isAuthenticated, user?.U_CODIGO]);
+  }, [isAuthenticated]);
 
   return null;
 }
@@ -357,9 +424,7 @@ function App() {
         <SocketManager />
         <AppRoutes />
         <Toaster position="top-right" />
-        {/* <PushNotificaciones /> */}
         <SocketStatus />
-        {/* <FloatingHelpWidget /> ✅ Widget de ayuda flotante */}
         {puedeInstalar && (
           <button onClick={instalarApp} className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
             📲 Instalar App
