@@ -49,7 +49,7 @@ export const pushService = {
     }
 
     if (initializing) {
-      console.log('⏳ Ya hay una suscripción en curso...');
+      //console.log('⏳ Ya hay una suscripción en curso...');
       return null;
     }
 
@@ -64,9 +64,9 @@ export const pushService = {
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
-        console.log('✅ NUEVA SUSCRIPCIÓN CREADA');
+        //console.log('✅ NUEVA SUSCRIPCIÓN CREADA');
       } else {
-        console.log('♻️ SUSCRIPCIÓN EXISTENTE REUTILIZADA');
+        //console.log('♻️ SUSCRIPCIÓN EXISTENTE REUTILIZADA');
       }
 
       const token = sessionStorage.getItem('token');
@@ -90,7 +90,7 @@ export const pushService = {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('📡 BACKEND RESPONSE:', result);
+        //console.log('📡 BACKEND RESPONSE:', result);
       } else {
         console.error('❌ BACKEND ERROR:', result);
       }
