@@ -10,9 +10,9 @@ const CrearQuinielaPage = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
-    c_campeonato: '',
-    fecha_inicio: '',
-    fecha_fin: '',
+    C_CAMPEONATO: '',
+    FECHA_inicio: '',
+    FECHA_fin: '',
     estado: 'ACTIVA',
     tipo: 'GENERAL',
     codigo_acceso: '',
@@ -86,10 +86,10 @@ const CrearQuinielaPage = () => {
               </label>
               <input
                 type="text"
-                name="c_campeonato"
+                name="C_CAMPEONATO"
                 required
                 maxLength={3}
-                value={formData.c_campeonato}
+                value={formData.C_CAMPEONATO}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Ej: M26, LGN"
@@ -116,13 +116,13 @@ const CrearQuinielaPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Inicio *
+                FECHA Inicio *
               </label>
               <input
                 type="date"
-                name="fecha_inicio"
+                name="FECHA_inicio"
                 required
-                value={formData.fecha_inicio}
+                value={formData.FECHA_inicio}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
@@ -130,13 +130,13 @@ const CrearQuinielaPage = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Fin *
+                FECHA Fin *
               </label>
               <input
                 type="date"
-                name="fecha_fin"
+                name="FECHA_fin"
                 required
-                value={formData.fecha_fin}
+                value={formData.FECHA_fin}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
