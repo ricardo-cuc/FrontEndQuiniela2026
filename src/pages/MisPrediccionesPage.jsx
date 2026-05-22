@@ -38,7 +38,7 @@ const MisPrediccionesPage = () => {
   // Escuchar eventos de WebSocket
   useEffect(() => {
     if (lastMessage && !isUpdatingRef.current) {
-      console.log('📡 Evento recibido en MisPrediccionesPage:', lastMessage);
+      //console.log('📡 Evento recibido en MisPrediccionesPage:', lastMessage);
       
       isUpdatingRef.current = true;
       
@@ -83,7 +83,7 @@ const MisPrediccionesPage = () => {
         const bloqueado = lastMessage.bloqueado === true;
         const quinielaId = lastMessage.quinielaId;
         
-        console.log('🔍 Actualizando bloqueo:', { quinielaId, bloqueado });
+        //console.log('🔍 Actualizando bloqueo:', { quinielaId, bloqueado });
         
         // 🔥 ACTUALIZAR EL ESTADO LOCAL DE LAS QUINIELAS
         setQuinielas(prev => {
@@ -92,14 +92,14 @@ const MisPrediccionesPage = () => {
               ? { ...q, PREDICCIONES_BLOQUEADAS: bloqueado }
               : q
           );
-          console.log('📊 Quinielas actualizadas:', nuevas.map(q => ({ id: q.ID_QUINIELA, bloqueada: q.PREDICCIONES_BLOQUEADAS })));
+          //console.log('📊 Quinielas actualizadas:', nuevas.map(q => ({ id: q.ID_QUINIELA, bloqueada: q.PREDICCIONES_BLOQUEADAS })));
           return nuevas;
         });
         
         // 🔥 ACTUALIZAR LA QUINIELA SELECCIONADA SI ES LA MISMA
         if (quinielaSeleccionada?.ID_QUINIELA === quinielaId) {
           setQuinielaSeleccionada(prev => ({ ...prev, PREDICCIONES_BLOQUEADAS: bloqueado }));
-          console.log('✅ Quiniela seleccionada actualizada:', bloqueado);
+          //console.log('✅ Quiniela seleccionada actualizada:', bloqueado);
         }
         
         const message = bloqueado 
