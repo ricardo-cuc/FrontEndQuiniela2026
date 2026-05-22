@@ -121,7 +121,7 @@ function SessionMonitor() {
   useEffect(() => {
     const handleSessionExpired = () => {
       if (isAuthenticated) {
-        console.log('Sesión expirada, redirigiendo al login...');
+        //console.log('Sesión expirada, redirigiendo al login...');
         logout();
         navigate('/login', { 
           state: { message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' }
@@ -151,17 +151,17 @@ function SocketManager() {
   const registerUserPresence = () => {
     // Verificar conexión del socket
     if (!globalSocket?.connected) {
-      console.log('❌ [SOCKET] No conectado');
+      //console.log('❌ [SOCKET] No conectado');
       return;
     }
     
     if (!isAuthenticated) {
-      console.log('❌ [SOCKET] Usuario no autenticado');
+      //console.log('❌ [SOCKET] Usuario no autenticado');
       return;
     }
     
     if (isRegisteredRef.current) {
-      console.log('⚠️ [SOCKET] Ya registrado, omitiendo');
+      //console.log('⚠️ [SOCKET] Ya registrado, omitiendo');
       return;
     }
 
@@ -172,7 +172,7 @@ function SocketManager() {
       if (storedUser) {
         try {
           userData = JSON.parse(storedUser);
-          console.log('📝 [SOCKET] Usuario obtenido de sessionStorage:', userData);
+          //console.log('📝 [SOCKET] Usuario obtenido de sessionStorage:', userData);
         } catch (e) {
           console.error('❌ [SOCKET] Error parsing sessionStorage user:', e);
         }
@@ -182,12 +182,12 @@ function SocketManager() {
     const uCodigo = userData?.U_CODIGO;
     const nombre = `${userData?.U_NOMBRE || ''} ${userData?.U_APELLIDO || ''}`.trim() || userData?.U_CORREO || 'Usuario';
     
-    console.log('=========================================');
-    console.log('🔴 [SOCKET] REGISTRANDO USUARIO:');
-    console.log('   - userData:', userData);
-    console.log('   - uCodigo encontrado:', uCodigo);
-    console.log('   - nombreCompleto:', nombre);
-    console.log('=========================================');
+    //console.log('=========================================');
+    //console.log('🔴 [SOCKET] REGISTRANDO USUARIO:');
+    //console.log('   - userData:', userData);
+    //console.log('   - uCodigo encontrado:', uCodigo);
+    //console.log('   - nombreCompleto:', nombre);
+    //console.log('=========================================');
     
     if (!uCodigo) {
       console.error('❌ [SOCKET] No se puede registrar: U_CODIGO es undefined');
@@ -199,17 +199,17 @@ function SocketManager() {
       nombre: nombre
     };
     
-    console.log('📤 [SOCKET] Enviando al servidor:', datosEnvio);
+    //console.log('📤 [SOCKET] Enviando al servidor:', datosEnvio);
     
     globalSocket.emit('registrar-usuario', datosEnvio);
     isRegisteredRef.current = true;
     
-    console.log('✅ [SOCKET] Evento registrar-usuario enviado');
+    //console.log('✅ [SOCKET] Evento registrar-usuario enviado');
   };
 
   const setupSocket = () => {
     if (!isAuthenticated) {
-      console.log('❌ [SOCKET] No autenticado, no se crea socket');
+      //console.log('❌ [SOCKET] No autenticado, no se crea socket');
       return;
     }
     
@@ -226,12 +226,12 @@ function SocketManager() {
     }
     
     if (!userCodigo) {
-      console.log('❌ [SOCKET] No hay U_CODIGO, esperando...');
+      //console.log('❌ [SOCKET] No hay U_CODIGO, esperando...');
       return;
     }
 
     if (globalSocket?.connected) {
-      console.log('✅ [SOCKET] Usando socket existente');
+      //console.log('✅ [SOCKET] Usando socket existente');
       registerUserPresence();
       return;
     }
@@ -241,7 +241,7 @@ function SocketManager() {
       globalSocket = null;
     }
 
-    console.log('🔌 [SOCKET] Creando nueva conexión socket...');
+    //console.log('🔌 [SOCKET] Creando nueva conexión socket...');
     globalSocket = io(API_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -259,20 +259,20 @@ function SocketManager() {
     });
 
     globalSocket.on('connect', () => {
-      console.log('✅ [SOCKET] Socket conectado correctamente');
+      //console.log('✅ [SOCKET] Socket conectado correctamente');
       reconnectAttempts.current = 0;
       isRegisteredRef.current = false;
       registerUserPresence();
     });
 
     globalSocket.on('reconnect', (attemptNumber) => {
-      console.log(`🔄 [SOCKET] Reconectado después de ${attemptNumber} intentos`);
+      //console.log(`🔄 [SOCKET] Reconectado después de ${attemptNumber} intentos`);
       isRegisteredRef.current = false;
       registerUserPresence();
     });
 
     globalSocket.on('reconnecting', (attemptNumber) => {
-      console.log(`🔄 [SOCKET] Reconectando... Intento ${attemptNumber}`);
+      //console.log(`🔄 [SOCKET] Reconectando... Intento ${attemptNumber}`);
     });
 
     globalSocket.on('connect_error', (error) => {
@@ -281,7 +281,7 @@ function SocketManager() {
     });
 
     globalSocket.on('disconnect', (reason) => {
-      console.log(`🔌 [SOCKET] Desconectado: ${reason}`);
+      //console.log(`🔌 [SOCKET] Desconectado: ${reason}`);
       isRegisteredRef.current = false;
       
       if (reason === 'io server disconnect') {
@@ -301,11 +301,11 @@ function SocketManager() {
     });
 
     globalSocket.on('usuario-conectado', (data) => {
-      console.log('👤 [SOCKET] Usuario conectado:', data);
+      //console.log('👤 [SOCKET] Usuario conectado:', data);
     });
 
     globalSocket.on('usuario-desconectado', (data) => {
-      console.log('👤 [SOCKET] Usuario desconectado:', data);
+      //console.log('👤 [SOCKET] Usuario desconectado:', data);
     });
   };
 
@@ -313,7 +313,7 @@ function SocketManager() {
     if (isAuthenticated) {
       setupSocket();
     } else if (!isAuthenticated && globalSocket) {
-      console.log('🔌 [SOCKET] Cerrando socket por logout');
+      //console.log('🔌 [SOCKET] Cerrando socket por logout');
       globalSocket.disconnect();
       globalSocket = null;
       isRegisteredRef.current = false;
@@ -326,7 +326,7 @@ function SocketManager() {
     const handleVisibilityChange = () => {
       if (!document.hidden && isAuthenticated) {
         if (!globalSocket?.connected) {
-          console.log('📱 [SOCKET] Página visible, reconectando...');
+          //console.log('📱 [SOCKET] Página visible, reconectando...');
           setupSocket();
         } else if (globalSocket?.connected && !isRegisteredRef.current) {
           registerUserPresence();
@@ -335,7 +335,7 @@ function SocketManager() {
     };
 
     const handleOnline = () => {
-      console.log('🌐 [SOCKET] Red recuperada, reconectando...');
+      //console.log('🌐 [SOCKET] Red recuperada, reconectando...');
       if (isAuthenticated) {
         setupSocket();
       }
