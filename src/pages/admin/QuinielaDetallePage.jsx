@@ -23,10 +23,10 @@ const QuinielaDetallePage = () => {
   const [isSubmittingGrupo, setIsSubmittingGrupo] = useState(false);
   
   const [nuevoPartido, setNuevoPartido] = useState({
-    c_equipo_1: '',
-    c_equipo_2: '',
-    fecha: '',
-    id_grupo: ''
+    EQUIPO_LOCAL: '',
+    EQUIPO_VISITANTE: '',
+    FECHA: '',
+    ID_GRUPO: ''
   });
   const [nuevoGrupo, setNuevoGrupo] = useState({
     nombre: ''
@@ -216,7 +216,7 @@ const QuinielaDetallePage = () => {
     try {
       await api.post('/api/grupos', {
         nombre: nuevoGrupo.nombre,
-        c_campeonato: quiniela.C_CAMPEONATO,
+        C_CAMPEONATO: quiniela.C_CAMPEONATO,
         id_quiniela: parseInt(id)
       });
       
@@ -242,17 +242,17 @@ const QuinielaDetallePage = () => {
     
     if (isSubmittingPartido) return;
     
-    if (!nuevoPartido.c_equipo_1 || !nuevoPartido.c_equipo_2) {
+    if (!nuevoPartido.EQUIPO_LOCAL || !nuevoPartido.EQUIPO_VISITANTE) {
       toast.error('Completa todos los campos requeridos');
       return;
     }
 
-    if (nuevoPartido.c_equipo_1 === nuevoPartido.c_equipo_2) {
+    if (nuevoPartido.EQUIPO_LOCAL === nuevoPartido.EQUIPO_VISITANTE) {
       toast.error('Los equipos deben ser diferentes');
       return;
     }
 
-    if (!nuevoPartido.id_grupo) {
+    if (!nuevoPartido.ID_GRUPO) {
       toast.error('El grupo es requerido');
       return;
     }
@@ -266,18 +266,18 @@ const QuinielaDetallePage = () => {
 
     try {
       await api.post('/api/partidos', {
-        c_campeonato: quiniela.C_CAMPEONATO,
-        c_equipo_1: nuevoPartido.c_equipo_1,
-        c_equipo_2: nuevoPartido.c_equipo_2,
-        fecha: nuevoPartido.fecha || null,
-        id_grupo: parseInt(nuevoPartido.id_grupo),
+        C_CAMPEONATO: quiniela.C_CAMPEONATO,
+        EQUIPO_LOCAL: nuevoPartido.EQUIPO_LOCAL,
+        EQUIPO_VISITANTE: nuevoPartido.EQUIPO_VISITANTE,
+        FECHA: nuevoPartido.FECHA || null,
+        ID_GRUPO: parseInt(nuevoPartido.ID_GRUPO),
         id_fase: null,
-        actualizado_por: '00656'
+        ACTUALIZADO_POR: '00656'
       });
       
       toast.success('✅ Partido creado exitosamente');
       setShowModal(false);
-      setNuevoPartido({ c_equipo_1: '', c_equipo_2: '', fecha: '', id_grupo: '' });
+      setNuevoPartido({ EQUIPO_LOCAL: '', EQUIPO_VISITANTE: '', FECHA: '', ID_GRUPO: '' });
       
       // Recargar datos en segundo plano
       setTimeout(() => refreshData(), 500);
@@ -307,7 +307,7 @@ const QuinielaDetallePage = () => {
   const cerrarModalPartido = () => {
     if (!isSubmittingPartido) {
       setShowModal(false);
-      setNuevoPartido({ c_equipo_1: '', c_equipo_2: '', fecha: '', id_grupo: '' });
+      setNuevoPartido({ EQUIPO_LOCAL: '', EQUIPO_VISITANTE: '', FECHA: '', ID_GRUPO: '' });
     }
   };
 
@@ -332,8 +332,8 @@ const QuinielaDetallePage = () => {
   const quinielaNombre = quiniela?.NOMBRE || `Quiniela #${id}`;
   const quinielaCampeonato = quiniela?.C_CAMPEONATO || 'LGN';
   const quinielaEstado = quiniela?.ESTADO || 'ACTIVA';
-  const fechaInicio = quiniela?.FECHA_INICIO ? new Date(quiniela.FECHA_INICIO) : new Date();
-  const fechaFin = quiniela?.FECHA_FIN ? new Date(quiniela.FECHA_FIN) : new Date();
+  const FECHAInicio = quiniela?.FECHA_INICIO ? new Date(quiniela.FECHA_INICIO) : new Date();
+  const FECHAFin = quiniela?.FECHA_FIN ? new Date(quiniela.FECHA_FIN) : new Date();
 
   const partidosPendientes = partidos.filter(p => p.GOLES_REALES_LOCAL === null || p.GOLES_REALES_LOCAL === undefined);
   const partidosFinalizados = partidos.filter(p => p.GOLES_REALES_LOCAL !== null && p.GOLES_REALES_LOCAL !== undefined);
@@ -364,7 +364,7 @@ const QuinielaDetallePage = () => {
             <h1 className="text-2xl font-bold">{quinielaNombre}</h1>
             <p className="mt-2 text-indigo-100">ID: {id} | Campeonato: {quinielaCampeonato}</p>
             <div className="mt-4 flex flex-wrap gap-4 text-sm">
-              <span>📅 {fechaInicio.toLocaleDateString()} - {fechaFin.toLocaleDateString()}</span>
+              <span>📅 {FECHAInicio.toLocaleDateString()} - {FECHAFin.toLocaleDateString()}</span>
               <span>🏆 {quinielaCampeonato}</span>
               <span>⭐ Estado quiniela: {quinielaEstado}</span>
               <span className={`${prediccionesBloqueadas ? 'bg-red-500' : 'bg-green-500'} px-2 py-0.5 rounded-full text-xs font-semibold`}>
@@ -518,9 +518,9 @@ const QuinielaDetallePage = () => {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Equipo Local *</label>
                 <select
-                  name="c_equipo_1"
+                  name="EQUIPO_LOCAL"
                   required
-                  value={nuevoPartido.c_equipo_1}
+                  value={nuevoPartido.EQUIPO_LOCAL}
                   onChange={handleNuevoPartidoChange}
                   disabled={isSubmittingPartido}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -537,9 +537,9 @@ const QuinielaDetallePage = () => {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Equipo Visitante *</label>
                 <select
-                  name="c_equipo_2"
+                  name="EQUIPO_VISITANTE"
                   required
-                  value={nuevoPartido.c_equipo_2}
+                  value={nuevoPartido.EQUIPO_VISITANTE}
                   onChange={handleNuevoPartidoChange}
                   disabled={isSubmittingPartido}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -557,9 +557,9 @@ const QuinielaDetallePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Grupo *</label>
                 <div className="flex gap-2">
                   <select
-                    name="id_grupo"
+                    name="ID_GRUPO"
                     required
-                    value={nuevoPartido.id_grupo}
+                    value={nuevoPartido.ID_GRUPO}
                     onChange={handleNuevoPartidoChange}
                     disabled={isSubmittingPartido}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -582,11 +582,11 @@ const QuinielaDetallePage = () => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">FECHA y Hora</label>
                 <input
                   type="datetime-local"
-                  name="fecha"
-                  value={nuevoPartido.fecha}
+                  name="FECHA"
+                  value={nuevoPartido.FECHA}
                   onChange={handleNuevoPartidoChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
