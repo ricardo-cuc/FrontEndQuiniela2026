@@ -26,7 +26,6 @@ const Login = () => {
   const [showAyudaModal, setShowAyudaModal] = useState(false);
   const [esPrimeraVez, setEsPrimeraVez] = useState(false);
 
-  // ✅ CAMBIADO: nombres de campos en minúsculas
   const [formData, setFormData] = useState({
     U_CORREO: '',
     U_PASSWORD: '',
@@ -81,7 +80,6 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ✅ CAMBIADO: usar U_CORREO y U_PASSWORD
     if (!formData.U_CORREO.trim() || !formData.U_PASSWORD.trim()) {
       toast.error('Por favor completa todos los campos');
       return;
@@ -90,7 +88,6 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // ✅ CAMBIADO: enviar con los nombres correctos
       await login({
         U_CORREO: formData.U_CORREO,
         U_PASSWORD: formData.U_PASSWORD,
@@ -214,12 +211,25 @@ const Login = () => {
         </div>
       )}
 
-      {/* Fondo decorativo */}
+      {/* Fondo decorativo CON IMAGEN AGREGADA */}
       <div className="absolute inset-0">
+        {/* Círculos decorativos originales */}
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-indigo-600/30 blur-3xl" />
         <div className="absolute top-1/3 -right-24 h-80 w-80 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-600/20 blur-3xl" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_35%)]" />
+        
+        {/* ✅ Imagen de fondo - mascotas mundial  */}
+        <div 
+          className="absolute inset-0 opacity-90 pointer-events-none select-none"
+          style={{
+            backgroundImage: 'url("/mascotas-mundial.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            mixBlendMode: 'overlay'
+          }}
+        />
       </div>
 
       <div className="relative z-10 min-h-screen grid lg:grid-cols-2">
@@ -290,7 +300,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Panel derecho - FORMULARIO CORREGIDO */}
+        {/* Panel derecho - FORMULARIO */}
         <div className="flex items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
           <div className="w-full max-w-md">
             {/* Logo móvil */}
