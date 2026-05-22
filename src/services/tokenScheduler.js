@@ -20,7 +20,7 @@ const getTokenRemainingTime = (token) => {
 export const scheduleTokenRefresh = () => {
   // Evitar múltiples schedulers simultáneos
   if (isScheduling) {
-    console.log('⏳ Ya hay un scheduler en proceso...');
+    //console.log('⏳ Ya hay un scheduler en proceso...');
     return;
   }
   
@@ -32,7 +32,7 @@ export const scheduleTokenRefresh = () => {
   
   const token = authService.getToken();
   if (!token) {
-    console.log('⏰ No hay token válido para programar refresh');
+    //console.log('⏰ No hay token válido para programar refresh');
     return;
   }
   
@@ -40,7 +40,7 @@ export const scheduleTokenRefresh = () => {
   
   // Si el token ya expiró o expirará en menos de 1 minuto
   if (remainingTime <= 60000) {
-    console.log('⚠️ Token por expirar o ya expirado, no se programa refresh');
+    //console.log('⚠️ Token por expirar o ya expirado, no se programa refresh');
     return;
   }
   
@@ -51,13 +51,13 @@ export const scheduleTokenRefresh = () => {
   if (timeToRefresh > 0 && timeToRefresh < 60 * 60 * 1000) { // Solo si falta menos de 1 hora
     isScheduling = true;
     
-    console.log(`🕐 Programando refresh de token en ${Math.round(timeToRefresh / 60000)} minutos`);
+    //console.log(`🕐 Programando refresh de token en ${Math.round(timeToRefresh / 60000)} minutos`);
     
     refreshTimeout = setTimeout(async () => {
-      console.log('🔄 Ejecutando refresh automático de token...');
+      //console.log('🔄 Ejecutando refresh automático de token...');
       try {
         await authService.refreshToken();
-        console.log('✅ Token renovado exitosamente');
+        //console.log('✅ Token renovado exitosamente');
       } catch (error) {
         console.error('❌ Error al renovar token automáticamente:', error);
         // No hacer nada aquí, el interceptor manejará el 401
@@ -67,7 +67,7 @@ export const scheduleTokenRefresh = () => {
       }
     }, timeToRefresh);
   } else {
-    console.log(`⏰ Tiempo hasta expiración: ${Math.round(remainingTime / 60000)} minutos. No se programa refresh.`);
+    //console.log(`⏰ Tiempo hasta expiración: ${Math.round(remainingTime / 60000)} minutos. No se programa refresh.`);
   }
 };
 
@@ -76,7 +76,7 @@ export const clearTokenSchedule = () => {
     clearTimeout(refreshTimeout);
     refreshTimeout = null;
     isScheduling = false;
-    console.log('🗑️ Scheduler de token cancelado');
+    //console.log('🗑️ Scheduler de token cancelado');
   }
 };
 
