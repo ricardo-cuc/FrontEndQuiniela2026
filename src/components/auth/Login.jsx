@@ -26,13 +26,13 @@ const Login = () => {
   const [showAyudaModal, setShowAyudaModal] = useState(false);
   const [esPrimeraVez, setEsPrimeraVez] = useState(false);
 
+  // ✅ CAMBIADO: nombres de campos en minúsculas
   const [formData, setFormData] = useState({
-    U_CORREO: '',
-    U_PASSWORD: '',
+    u_correo: '',
+    u_password: '',
   });
 
   useEffect(() => {
-    // Verificar si es la primera vez que ve el login
     const yaVio = localStorage.getItem('visto_login_ayuda');
     if (!yaVio) {
       setEsPrimeraVez(true);
@@ -81,7 +81,8 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.U_CORREO.trim() || !formData.U_PASSWORD.trim()) {
+    // ✅ CAMBIADO: usar u_correo y u_password
+    if (!formData.u_correo.trim() || !formData.u_password.trim()) {
       toast.error('Por favor completa todos los campos');
       return;
     }
@@ -89,8 +90,10 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      // ✅ CAMBIADO: enviar con los nombres correctos
       await login({
-        ...formData,
+        u_correo: formData.u_correo,
+        u_password: formData.u_password,
         rememberMe,
       });
 
@@ -99,7 +102,6 @@ const Login = () => {
     } catch (error) {
       console.error('Error detallado:', error);
       
-      // ✅ Mensajes más amigables según el error
       let mensaje = 'Error al iniciar sesión';
       
       if (error.response?.status === 401) {
@@ -288,7 +290,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Panel derecho */}
+        {/* Panel derecho - FORMULARIO CORREGIDO */}
         <div className="flex items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
           <div className="w-full max-w-md">
             {/* Logo móvil */}
@@ -321,7 +323,7 @@ const Login = () => {
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div>
                   <label
-                    htmlFor="U_CORREO"
+                    htmlFor="u_correo"
                     className="mb-2 block text-sm font-medium text-slate-700"
                   >
                     Correo electrónico
@@ -329,12 +331,12 @@ const Login = () => {
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
-                      id="U_CORREO"
-                      name="U_CORREO"
+                      id="u_correo"
+                      name="u_correo"
                       type="email"
                       autoComplete="email"
                       required
-                      value={formData.U_CORREO}
+                      value={formData.u_correo}
                       onChange={handleChange}
                       placeholder="correo@ejemplo.com"
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
@@ -345,7 +347,7 @@ const Login = () => {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <label
-                      htmlFor="U_PASSWORD"
+                      htmlFor="u_password"
                       className="block text-sm font-medium text-slate-700"
                     >
                       Contraseña
@@ -354,12 +356,12 @@ const Login = () => {
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
-                      id="U_PASSWORD"
-                      name="U_PASSWORD"
+                      id="u_password"
+                      name="u_password"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       required
-                      value={formData.U_PASSWORD}
+                      value={formData.u_password}
                       onChange={handleChange}
                       placeholder="Ingresa tu contraseña"
                       className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-12 py-3 text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
