@@ -1,4 +1,4 @@
-
+//src/services/pushService.js
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 let initializing = false;
