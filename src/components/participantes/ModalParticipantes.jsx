@@ -227,7 +227,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       const [participantesRes, mensajesRes] = await Promise.all([
         api.get(`/api/quinielas/${quinielaId}/participantes`),
-        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50`)
+        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&include=reacciones,respuestas`)
       ]);
       
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
@@ -261,7 +261,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     const nextPage = page + 1;
     
     try {
-      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}`);
+      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}&include=reacciones,respuestas`);
       const nuevosMensajes = (response.data.data || []).reverse();
       
       if (nuevosMensajes.length > 0) {
@@ -344,6 +344,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
+  // ✅ Única versión correcta - CON RECARGA DE MENSAJES
   const enviarReaccionMensaje = async (mensajeId, emoji) => {
     try {
       await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeId}/reacciones`, {
@@ -353,6 +354,11 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       saveRecentEmoji(emoji);
       toast.success(`Reacción ${emoji.emoji} añadida al mensaje`, { duration: 1500 });
       setShowReaccionesMensaje(null);
+      
+      // ✅ Recargar mensajes para ver la reacción actualizada
+      const mensajesRes = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&include=reacciones,respuestas`);
+      const mensajesOrdenados = (mensajesRes.data.data || []).reverse();
+      setMensajes(mensajesOrdenados);
       
     } catch (error) {
       console.error('Error enviando reacción a mensaje:', error);
@@ -381,6 +387,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
 
   const renderMensaje = (msg) => {
     const esRespondiendo = mensajeRespondiendo?.ID_MENSAJE === msg.ID_MENSAJE;
+    
+    // Mostrar reacciones del mensaje
+    const tieneReacciones = msg.reacciones && msg.reacciones.length > 0;
     
     return (
       <div key={msg.ID_MENSAJE} className="mb-3">
@@ -411,6 +420,17 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           <p className="text-sm text-gray-700 break-words mt-2 leading-relaxed">
             {msg.MENSAJE}
           </p>
+          
+          {/* Mostrar reacciones existentes */}
+          {tieneReacciones && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {msg.reacciones.map((reaccion, idx) => (
+                <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5" title={reaccion.nombre}>
+                  {reaccion.emoji}
+                </span>
+              ))}
+            </div>
+          )}
           
           <p className="text-xs text-gray-400 mt-1">
             {new Date(msg.FECHA_CREACION).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
