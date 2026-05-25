@@ -183,6 +183,42 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             setTypingUsers(prev => ({ ...prev, [usuario]: false }));
           }, 2000);
         });
+        
+        // ✅ Escuchar nuevas reacciones en tiempo real
+        socketRef.current.on('nueva-reaccion-mensaje', ({ mensajeId, reaccion }) => {
+          setMensajes(prev => prev.map(msg => {
+            if (msg.ID_MENSAJE === mensajeId) {
+              const existingReacciones = msg.reacciones || [];
+              const existingIndex = existingReacciones.findIndex(r => r.usuarioId === reaccion.usuarioId);
+              
+              let nuevasReacciones;
+              if (existingIndex >= 0) {
+                nuevasReacciones = [...existingReacciones];
+                nuevasReacciones[existingIndex] = {
+                  ...nuevasReacciones[existingIndex],
+                  emoji: reaccion.emoji,
+                  fecha: new Date()
+                };
+              } else {
+                nuevasReacciones = [...existingReacciones, reaccion];
+              }
+              
+              return { ...msg, reacciones: nuevasReacciones };
+            }
+            return msg;
+          }));
+        });
+        
+        // ✅ Escuchar respuestas en tiempo real
+        socketRef.current.on('nueva-respuesta-mensaje', ({ mensajeId, respuesta }) => {
+          setMensajes(prev => prev.map(msg => {
+            if (msg.ID_MENSAJE === mensajeId) {
+              const existingRespuestas = msg.respuestas || [];
+              return { ...msg, respuestas: [...existingRespuestas, respuesta] };
+            }
+            return msg;
+          }));
+        });
       } else {
         socketRef.current.emit('join-quiniela', quinielaId);
         setIsChatFocused(true);
@@ -227,7 +263,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
       const [participantesRes, mensajesRes] = await Promise.all([
         api.get(`/api/quinielas/${quinielaId}/participantes`),
-        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&include=reacciones,respuestas`)
+        api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50`)
       ]);
       
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
@@ -261,7 +297,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     const nextPage = page + 1;
     
     try {
-      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}&include=reacciones,respuestas`);
+      const response = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&page=${nextPage}`);
       const nuevosMensajes = (response.data.data || []).reverse();
       
       if (nuevosMensajes.length > 0) {
@@ -286,8 +322,26 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
+  // ✅ Enviar mensaje - NO recarga, solo agrega al estado local
   const enviarMensaje = async () => {
     if (!nuevoMensaje.trim()) return;
+    
+    // Optimistic update - mostrar mensaje inmediatamente
+    const mensajeTemp = {
+      ID_MENSAJE: Date.now(),
+      MENSAJE: nuevoMensaje,
+      FECHA_CREACION: new Date(),
+      U_CODIGO: usuarioActual,
+      U_NOMBRE: 'Tú',
+      U_APELLIDO: '',
+      reacciones: [],
+      respuestas: []
+    };
+    
+    setMensajes(prev => [...prev, mensajeTemp]);
+    setNuevoMensaje('');
+    setIsTyping(false);
+    scrollToBottom();
     
     setEnviando(true);
     try {
@@ -296,8 +350,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         tipo: 'texto'
       });
       
-      setNuevoMensaje('');
-      setIsTyping(false);
       if (socketRef.current) {
         socketRef.current.emit('usuario-escribiendo', {
           quinielaId,
@@ -308,7 +360,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       
     } catch (error) {
       console.error('Error enviando mensaje:', error);
-      toast.error(error.response?.data?.message || 'Error al enviar mensaje');
+      toast.error('Error al enviar mensaje');
+      // Si falla, recargar para corregir
+      cargarDatos();
     } finally {
       setEnviando(false);
     }
@@ -329,6 +383,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       toast.success(`Reacción ${emoji.emoji} enviada`, { duration: 1500 });
       setShowEmojis(null);
       
+      // Actualizar participantes sin recargar todo
       const participantesRes = await api.get(`/api/quinielas/${quinielaId}/participantes`);
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
         ...p,
@@ -344,51 +399,95 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // ✅ Única versión correcta - CON RECARGA DE MENSAJES
+  // ✅ Reaccionar a mensaje - actualización inmediata sin recargar
   const enviarReaccionMensaje = async (mensajeId, emoji) => {
+    // Optimistic update - mostrar reacción inmediatamente
+    setMensajes(prev => prev.map(msg => {
+      if (msg.ID_MENSAJE === mensajeId) {
+        const existingReacciones = msg.reacciones || [];
+        const existingIndex = existingReacciones.findIndex(r => r.usuarioId === usuarioActual);
+        
+        let nuevasReacciones;
+        if (existingIndex >= 0) {
+          nuevasReacciones = [...existingReacciones];
+          nuevasReacciones[existingIndex] = {
+            ...nuevasReacciones[existingIndex],
+            emoji: emoji.emoji
+          };
+        } else {
+          nuevasReacciones = [...existingReacciones, {
+            emoji: emoji.emoji,
+            usuarioId: usuarioActual,
+            nombre: 'Tú',
+            fecha: new Date()
+          }];
+        }
+        
+        return { ...msg, reacciones: nuevasReacciones };
+      }
+      return msg;
+    }));
+    
+    setShowReaccionesMensaje(null);
+    
     try {
       await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeId}/reacciones`, {
         emoji: emoji.emoji
       });
       
       saveRecentEmoji(emoji);
-      toast.success(`Reacción ${emoji.emoji} añadida al mensaje`, { duration: 1500 });
-      setShowReaccionesMensaje(null);
-      
-      // ✅ Recargar mensajes para ver la reacción actualizada
-      const mensajesRes = await api.get(`/api/quinielas/${quinielaId}/mensajes?limit=50&include=reacciones,respuestas`);
-      const mensajesOrdenados = (mensajesRes.data.data || []).reverse();
-      setMensajes(mensajesOrdenados);
+      toast.success(`Reacción ${emoji.emoji} añadida`, { duration: 1500 });
       
     } catch (error) {
-      console.error('Error enviando reacción a mensaje:', error);
+      console.error('Error enviando reacción:', error);
       toast.error('Error al enviar reacción');
+      // Si falla, recargar para corregir
+      cargarDatos();
     }
   };
 
+  // ✅ Responder mensaje - actualización inmediata sin recargar
   const enviarRespuestaMensaje = async () => {
     if (!respuestaTexto.trim() || !mensajeRespondiendo) return;
+    
+    const respuestaTemp = {
+      ID_MENSAJE: Date.now(),
+      MENSAJE: respuestaTexto,
+      FECHA_CREACION: new Date(),
+      U_CODIGO: usuarioActual,
+      U_NOMBRE: 'Tú',
+      U_APELLIDO: '',
+      MENSAJE_PADRE_ID: mensajeRespondiendo.ID_MENSAJE
+    };
+    
+    // Optimistic update
+    setMensajes(prev => prev.map(msg => {
+      if (msg.ID_MENSAJE === mensajeRespondiendo.ID_MENSAJE) {
+        const existingRespuestas = msg.respuestas || [];
+        return { ...msg, respuestas: [...existingRespuestas, respuestaTemp] };
+      }
+      return msg;
+    }));
+    
+    setRespuestaTexto('');
+    setMensajeRespondiendo(null);
     
     try {
       await api.post(`/api/quinielas/${quinielaId}/mensajes/${mensajeRespondiendo.ID_MENSAJE}/responder`, {
         mensaje: respuestaTexto
       });
       
-      setRespuestaTexto('');
-      setMensajeRespondiendo(null);
       toast.success('Respuesta enviada');
-      cargarDatos();
       
     } catch (error) {
       console.error('Error enviando respuesta:', error);
-      toast.error(error.response?.data?.message || 'Error al enviar respuesta');
+      toast.error('Error al enviar respuesta');
+      cargarDatos();
     }
   };
 
   const renderMensaje = (msg) => {
     const esRespondiendo = mensajeRespondiendo?.ID_MENSAJE === msg.ID_MENSAJE;
-    
-    // Mostrar reacciones del mensaje
     const tieneReacciones = msg.reacciones && msg.reacciones.length > 0;
     
     return (
@@ -421,13 +520,24 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             {msg.MENSAJE}
           </p>
           
-          {/* Mostrar reacciones existentes */}
+          {/* Mostrar reacciones */}
           {tieneReacciones && (
             <div className="flex flex-wrap gap-1 mt-2">
               {msg.reacciones.map((reaccion, idx) => (
                 <span key={idx} className="text-xs bg-gray-100 rounded-full px-2 py-0.5" title={reaccion.nombre}>
                   {reaccion.emoji}
                 </span>
+              ))}
+            </div>
+          )}
+          
+          {/* Mostrar respuestas */}
+          {msg.respuestas && msg.respuestas.length > 0 && (
+            <div className="mt-2 ml-4 pl-2 border-l-2 border-gray-200">
+              {msg.respuestas.map((resp) => (
+                <div key={resp.ID_MENSAJE} className="text-xs text-gray-500 mt-1">
+                  <span className="font-semibold">{resp.U_NOMBRE}:</span> {resp.MENSAJE}
+                </div>
               ))}
             </div>
           )}
