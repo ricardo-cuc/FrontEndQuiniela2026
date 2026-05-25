@@ -184,7 +184,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
           }, 2000);
         });
         
-        // ✅ Escuchar nuevas reacciones en tiempo real
+        // ✅ Escuchar nuevas reacciones en tiempo real (SIN DUPLICAR)
         socketRef.current.on('nueva-reaccion-mensaje', ({ mensajeId, reaccion }) => {
           setMensajes(prev => prev.map(msg => {
             if (msg.ID_MENSAJE === mensajeId) {
@@ -193,13 +193,15 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
               
               let nuevasReacciones;
               if (existingIndex >= 0) {
+                // Actualizar reacción existente
                 nuevasReacciones = [...existingReacciones];
                 nuevasReacciones[existingIndex] = {
                   ...nuevasReacciones[existingIndex],
                   emoji: reaccion.emoji,
-                  fecha: new Date()
+                  fecha: reaccion.FECHA || new Date()
                 };
               } else {
+                // Agregar nueva reacción
                 nuevasReacciones = [...existingReacciones, reaccion];
               }
               
@@ -322,11 +324,10 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // ✅ Enviar mensaje - NO recarga, solo agrega al estado local
+  // ✅ Enviar mensaje - Optimistic update (solo para mensajes)
   const enviarMensaje = async () => {
     if (!nuevoMensaje.trim()) return;
     
-    // Optimistic update - mostrar mensaje inmediatamente
     const mensajeTemp = {
       ID_MENSAJE: Date.now(),
       MENSAJE: nuevoMensaje,
@@ -361,7 +362,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     } catch (error) {
       console.error('Error enviando mensaje:', error);
       toast.error('Error al enviar mensaje');
-      // Si falla, recargar para corregir
       cargarDatos();
     } finally {
       setEnviando(false);
@@ -383,7 +383,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       toast.success(`Reacción ${emoji.emoji} enviada`, { duration: 1500 });
       setShowEmojis(null);
       
-      // Actualizar participantes sin recargar todo
       const participantesRes = await api.get(`/api/quinielas/${quinielaId}/participantes`);
       const participantesConReacciones = (participantesRes.data.data || []).map(p => ({
         ...p,
@@ -399,35 +398,9 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
     }
   };
 
-  // ✅ Reaccionar a mensaje - actualización inmediata sin recargar
+  // ✅ Reaccionar a mensaje - SIN OPTIMISTIC UPDATE (solo socket para evitar duplicados)
   const enviarReaccionMensaje = async (mensajeId, emoji) => {
-    // Optimistic update - mostrar reacción inmediatamente
-    setMensajes(prev => prev.map(msg => {
-      if (msg.ID_MENSAJE === mensajeId) {
-        const existingReacciones = msg.reacciones || [];
-        const existingIndex = existingReacciones.findIndex(r => r.usuarioId === usuarioActual);
-        
-        let nuevasReacciones;
-        if (existingIndex >= 0) {
-          nuevasReacciones = [...existingReacciones];
-          nuevasReacciones[existingIndex] = {
-            ...nuevasReacciones[existingIndex],
-            emoji: emoji.emoji
-          };
-        } else {
-          nuevasReacciones = [...existingReacciones, {
-            emoji: emoji.emoji,
-            usuarioId: usuarioActual,
-            nombre: 'Tú',
-            fecha: new Date()
-          }];
-        }
-        
-        return { ...msg, reacciones: nuevasReacciones };
-      }
-      return msg;
-    }));
-    
+    // ❌ NO hacer optimistic update aquí para evitar duplicados
     setShowReaccionesMensaje(null);
     
     try {
@@ -438,15 +411,15 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       saveRecentEmoji(emoji);
       toast.success(`Reacción ${emoji.emoji} añadida`, { duration: 1500 });
       
+      // ✅ La reacción llegará por socket y se agregará automáticamente
+      
     } catch (error) {
       console.error('Error enviando reacción:', error);
       toast.error('Error al enviar reacción');
-      // Si falla, recargar para corregir
-      cargarDatos();
     }
   };
 
-  // ✅ Responder mensaje - actualización inmediata sin recargar
+  // ✅ Responder mensaje - Optimistic update
   const enviarRespuestaMensaje = async () => {
     if (!respuestaTexto.trim() || !mensajeRespondiendo) return;
     
@@ -460,7 +433,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
       MENSAJE_PADRE_ID: mensajeRespondiendo.ID_MENSAJE
     };
     
-    // Optimistic update
     setMensajes(prev => prev.map(msg => {
       if (msg.ID_MENSAJE === mensajeRespondiendo.ID_MENSAJE) {
         const existingRespuestas = msg.respuestas || [];
@@ -520,7 +492,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             {msg.MENSAJE}
           </p>
           
-          {/* Mostrar reacciones */}
           {tieneReacciones && (
             <div className="flex flex-wrap gap-1 mt-2">
               {msg.reacciones.map((reaccion, idx) => (
@@ -531,7 +502,6 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
             </div>
           )}
           
-          {/* Mostrar respuestas */}
           {msg.respuestas && msg.respuestas.length > 0 && (
             <div className="mt-2 ml-4 pl-2 border-l-2 border-gray-200">
               {msg.respuestas.map((resp) => (
