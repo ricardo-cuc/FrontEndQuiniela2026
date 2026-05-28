@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Search, Check } from 'lucide-react';
+import { ArrowLeft, Save, Search, Check, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -23,16 +23,13 @@ const SearchableSelect = ({
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Filtrar opciones
   const filteredOptions = options.filter(opt =>
     opt.N_EQUIPO?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     opt.C_EQUIPO?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Obtener el equipo seleccionado
   const selectedOption = options.find(opt => opt.C_EQUIPO === value);
 
-  // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -44,7 +41,6 @@ const SearchableSelect = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Manejar teclado
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -74,7 +70,6 @@ const SearchableSelect = ({
         {label} {required && '*'}
       </label>
       
-      {/* Input con búsqueda */}
       <div
         className={`w-full px-3 py-2 border border-gray-300 rounded-md bg-white flex items-center justify-between cursor-pointer ${
           disabled ? 'bg-gray-100 cursor-not-allowed' : 'hover:border-indigo-400'
@@ -101,10 +96,8 @@ const SearchableSelect = ({
         <Search className="h-4 w-4 text-gray-400" />
       </div>
 
-      {/* Dropdown con búsqueda */}
       {isOpen && !disabled && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-          {/* Input de búsqueda */}
           <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
             <input
               ref={inputRef}
@@ -118,7 +111,6 @@ const SearchableSelect = ({
             />
           </div>
           
-          {/* Lista de opciones */}
           {filteredOptions.length === 0 ? (
             <div className="p-3 text-center text-gray-500 text-sm">
               No se encontraron equipos
@@ -167,11 +159,18 @@ const SearchableSelect = ({
 const CrearPartidoPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [loadingFase, setLoadingFase] = useState(false);
   const [campeonatos, setCampeonatos] = useState([]);
   const [quinielas, setQuinielas] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [fases, setFases] = useState([]);
   const [grupos, setGrupos] = useState([]);
+  
+  // Estado para el modal de nueva fase
+  const [showFaseModal, setShowFaseModal] = useState(false);
+  const [nuevaFase, setNuevaFase] = useState({ nombre: '' });
+  const [isSubmittingFase, setIsSubmittingFase] = useState(false);
+  
   const [formData, setFormData] = useState({
     C_CAMPEONATO: '',
     id_quiniela: '',
@@ -199,7 +198,6 @@ const CrearPartidoPage = () => {
     }
   }, [formData.C_CAMPEONATO]);
 
-  // 🔧 CORREGIDO: Solo depende de id_quiniela, no de id_fase
   useEffect(() => {
     if (formData.id_quiniela) {
       cargarGrupos(formData.id_quiniela);
@@ -251,7 +249,6 @@ const CrearPartidoPage = () => {
     }
   };
 
-  // 🔧 CORREGIDO: Ya no recibe id_fase
   const cargarGrupos = async (id_quiniela) => {
     try {
       console.log(`🔄 Cargando grupos para quiniela: ${id_quiniela}`);
@@ -261,6 +258,40 @@ const CrearPartidoPage = () => {
     } catch (error) {
       console.error('Error al cargar grupos:', error);
       setGrupos([]);
+    }
+  };
+
+  // ============================================
+  // CREAR NUEVA FASE
+  // ============================================
+  const crearFase = async (e) => {
+    e.preventDefault();
+    if (isSubmittingFase) return;
+    if (!nuevaFase.nombre.trim()) {
+      toast.error('El nombre de la fase es requerido');
+      return;
+    }
+    if (!formData.C_CAMPEONATO) {
+      toast.error('Primero selecciona un campeonato');
+      return;
+    }
+    
+    setIsSubmittingFase(true);
+    try {
+      await api.post('/api/admin/fases', {
+        nombre: nuevaFase.nombre,
+        C_CAMPEONATO: formData.C_CAMPEONATO
+      });
+      toast.success(`✅ Fase "${nuevaFase.nombre}" creada exitosamente`);
+      setShowFaseModal(false);
+      setNuevaFase({ nombre: '' });
+      // Recargar las fases
+      await cargarFases(formData.C_CAMPEONATO);
+    } catch (error) {
+      console.error('Error al crear fase:', error);
+      toast.error(error.response?.data?.mensaje || 'Error al crear fase');
+    } finally {
+      setIsSubmittingFase(false);
     }
   };
 
@@ -361,26 +392,37 @@ const CrearPartidoPage = () => {
             </select>
           </div>
 
-          {/* Fase */}
+          {/* Fase - CON BOTÓN PARA CREAR NUEVA */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fase del Torneo *
             </label>
-            <select
-              name="id_fase"
-              required
-              value={formData.id_fase}
-              onChange={handleChange}
-              disabled={!formData.id_quiniela}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
-            >
-              <option value="">Selecciona una fase</option>
-              {fases.map((fase) => (
-                <option key={fase.ID} value={fase.ID}>
-                  {fase.NOMBRE} {fase.TIPO && `(${fase.TIPO})`}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                name="id_fase"
+                required
+                value={formData.id_fase}
+                onChange={handleChange}
+                disabled={!formData.id_quiniela}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+              >
+                <option value="">Selecciona una fase</option>
+                {fases.map((fase) => (
+                  <option key={fase.ID} value={fase.ID}>
+                    {fase.NOMBRE} {fase.TIPO && `(${fase.TIPO})`}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowFaseModal(true)}
+                className="bg-purple-600 text-white px-3 py-2 rounded-md hover:bg-purple-700 flex items-center gap-1"
+                title="Crear nueva fase"
+              >
+                <Plus className="h-4 w-4" />
+                Nueva
+              </button>
+            </div>
           </div>
           
           {/* Equipos con Searchable Select */}
@@ -458,6 +500,55 @@ const CrearPartidoPage = () => {
           </div>
         </form>
       </div>
+
+      {/* MODAL PARA CREAR NUEVA FASE */}
+      {showFaseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Crear Nueva Fase</h2>
+              <button onClick={() => setShowFaseModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={crearFase}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre de la Fase *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={nuevaFase.nombre}
+                  onChange={(e) => setNuevaFase({ nombre: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Ej: Fase de grupos, Octavos, Semifinal, Final"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  La fase se creará para el campeonato: {formData.C_CAMPEONATO}
+                </p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFaseModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingFase}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isSubmittingFase ? 'Creando...' : 'Crear Fase'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
