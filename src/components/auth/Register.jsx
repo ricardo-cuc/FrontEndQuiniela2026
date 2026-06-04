@@ -118,11 +118,6 @@ const Register = () => {
     try {
       const { confirmPassword, ...userData } = formData;
       
-      //console.log('=========================================');
-      //console.log('🔴 [REGISTER] Enviando registro:');
-      //console.log('   - userData:', userData);
-      //console.log('=========================================');
-      
       await register(userData);
       
       toast.success('✅ ¡Registro exitoso! Ahora puedes iniciar sesión');
@@ -153,27 +148,25 @@ const Register = () => {
         <div className="absolute top-1/3 -right-24 h-80 w-80 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-600/20 blur-3xl" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_35%)]" />
+        
+        {/* Imagen de fondo - mascotas mundial */}
+        <div 
+          className="absolute inset-0 opacity-10 pointer-events-none select-none"
+          style={{
+            backgroundImage: 'url("/mascotas-mundial.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            mixBlendMode: 'overlay'
+          }}
+        />
       </div>
 
       <div className="relative z-10 min-h-screen grid lg:grid-cols-2">
         {/* Panel izquierdo */}
         <div className="hidden lg:flex flex-col justify-between p-10 xl:p-14 text-white">
-          <div>
-            <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md shadow-xl">
-              <div className="rounded-xl bg-white/10 p-2 backdrop-blur-md">
-                <img
-                  src="/logo.png"
-                  alt="Quiniela 2026"
-                  className="h-8 w-auto object-contain"
-                />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-white">Quiniela 2026</h1>
-                <p className="text-sm text-slate-300">Predice, compite y gana</p>
-              </div>
-            </div>
-          </div>
-
+          {/* Logo eliminado */}
+          
           <div className="max-w-xl">
             <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm text-emerald-300">
               <ShieldCheck className="h-4 w-4" />
@@ -196,27 +189,8 @@ const Register = () => {
               </div>
             </div>
 
-      {/* Fondo decorativo CON IMAGEN AGREGADA */}
-      <div className="absolute inset-0">
-        {/* Círculos decorativos originales */}
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-indigo-600/30 blur-3xl" />
-        <div className="absolute top-1/3 -right-24 h-80 w-80 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-600/20 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_35%)]" />
-        
-        {/* ✅ Imagen de fondo - mascotas mundial  */}
-        <div 
-          className="absolute inset-0 opacity-10 pointer-events-none select-none"
-          style={{
-            backgroundImage: 'url("/mascotas-mundial.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            mixBlendMode: 'overlay'
-          }}
-        />
-      </div>
-            <div className="mt-8 pt-4 border-t border-white/10">
+            {/* Sección de redes sociales comentada */}
+            {/* <div className="mt-8 pt-4 border-t border-white/10">
               <p className="text-sm text-slate-400 mb-3">Síguenos en redes</p>
               <div className="flex gap-3">
                 {socialLinks.map((social) => (
@@ -235,7 +209,7 @@ const Register = () => {
                   </a>
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="text-sm text-slate-400">
@@ -246,23 +220,8 @@ const Register = () => {
         {/* Panel derecho - Formulario de registro */}
         <div className="flex items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
           <div className="w-full max-w-md">
-            {/* Logo móvil */}
-            <div className="mb-6 flex justify-center lg:hidden">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white backdrop-blur-md shadow-xl">
-                <div className="rounded-xl bg-white/10 p-2 backdrop-blur-md">
-                  <img
-                    src="/logo.png"
-                    alt="Quiniela 2026"
-                    className="h-7 w-auto object-contain"
-                  />
-                </div>
-                <div>
-                  <h1 className="text-base font-semibold text-white">Quiniela 2026</h1>
-                  <p className="text-xs text-slate-300">Predice y compite</p>
-                </div>
-              </div>
-            </div>
-
+            {/* Logo móvil eliminado */}
+            
             <div className="rounded-3xl border border-white/10 bg-white/80 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
               <div className="mb-6 text-center">
                 <Link 
@@ -476,8 +435,8 @@ const Register = () => {
                   </p>
                 </div>
 
-                {/* Redes Sociales en móvil */}
-                <div className="mt-6 pt-4 border-t border-slate-200 lg:hidden">
+                {/* Redes Sociales en móvil - COMENTADO */}
+                {/* <div className="mt-6 pt-4 border-t border-slate-200 lg:hidden">
                   <p className="text-center text-sm text-slate-600 mb-3">Síguenos en redes</p>
                   <div className="flex justify-center gap-4">
                     {socialLinks.map((social) => (
@@ -493,7 +452,7 @@ const Register = () => {
                       </a>
                     ))}
                   </div>
-                </div>
+                </div> */}
               </form>
             </div>
 
