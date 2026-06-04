@@ -10,7 +10,7 @@ import {
 const steps = [
   {
     id: 'welcome',
-    title: '🎉 ¡Bienvenido a Quiniela Lucalza!',
+    title: '🎉 ¡Bienvenido a Quiniela 2026!',
     description: 'Descubre una nueva forma de disfrutar el fútbol, prediciendo resultados y compitiendo con amigos en tiempo real.',
     icon: '🎯',
     target: null,
@@ -77,7 +77,7 @@ const steps = [
   {
     id: 'completado',
     title: '🎉 ¡Listo para comenzar!',
-    description: 'Ya conoces todas las funciones. ¡Empieza a disfrutar de Quiniela Lucalza y demuestra quién es el mejor pronosticador!',
+    description: 'Ya conoces todas las funciones. ¡Empieza a disfrutar de Quiniela 2026 y demuestra quién es el mejor pronosticador!',
     icon: '⭐',
     target: null,
     gradient: 'from-purple-500 to-pink-500'
