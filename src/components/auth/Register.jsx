@@ -34,32 +34,32 @@ const Register = () => {
     confirmPassword: '',
   });
 
-  const socialLinks = [
-    {
-      name: 'Instagram',
-      url: 'https://www.instagram.com/lucalzaguatemala/?hl=es-la',
-      icon: FaInstagram,
-      color: 'hover:bg-pink-600',
-    },
-    {
-      name: 'Facebook',
-      url: 'https://www.facebook.com/lucalzaguate/?locale=es_LA',
-      icon: FaFacebook,
-      color: 'hover:bg-blue-600',
-    },
-    {
-      name: 'TikTok',
-      url: 'https://www.tiktok.com/@grupolucalza',
-      icon: FaTiktok,
-      color: 'hover:bg-black',
-    },
-    {
-      name: 'LinkedIn',
-      url: 'https://www.linkedin.com/company/grupo-lucalza/posts/?feedView=all',
-      icon: FaLinkedin,
-      color: 'hover:bg-blue-700',
-    },
-  ];
+  // const socialLinks = [
+  //   {
+  //     name: 'Instagram',
+  //     url: 'https://www.instagram.com/lucalzaguatemala/?hl=es-la',
+  //     icon: FaInstagram,
+  //     color: 'hover:bg-pink-600',
+  //   },
+  //   {
+  //     name: 'Facebook',
+  //     url: 'https://www.facebook.com/lucalzaguate/?locale=es_LA',
+  //     icon: FaFacebook,
+  //     color: 'hover:bg-blue-600',
+  //   },
+  //   {
+  //     name: 'TikTok',
+  //     url: 'https://www.tiktok.com/@grupolucalza',
+  //     icon: FaTiktok,
+  //     color: 'hover:bg-black',
+  //   },
+  //   {
+  //     name: 'LinkedIn',
+  //     url: 'https://www.linkedin.com/company/grupo-lucalza/posts/?feedView=all',
+  //     icon: FaLinkedin,
+  //     color: 'hover:bg-blue-700',
+  //   },
+  // ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -163,12 +163,12 @@ const Register = () => {
               <div className="rounded-xl bg-white/10 p-2 backdrop-blur-md">
                 <img
                   src="/logo.png"
-                  alt="Lucalza"
+                  alt="Quiniela 2026"
                   className="h-8 w-auto object-contain"
                 />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-white">Quiniela Lucalza</h1>
+                <h1 className="text-lg font-semibold text-white">Quiniela 2026</h1>
                 <p className="text-sm text-slate-300">Predice, compite y gana</p>
               </div>
             </div>
@@ -252,12 +252,12 @@ const Register = () => {
                 <div className="rounded-xl bg-white/10 p-2 backdrop-blur-md">
                   <img
                     src="/logo.png"
-                    alt="Lucalza"
+                    alt="Quiniela 2026"
                     className="h-7 w-auto object-contain"
                   />
                 </div>
                 <div>
-                  <h1 className="text-base font-semibold text-white">Quiniela Lucalza</h1>
+                  <h1 className="text-base font-semibold text-white">Quiniela 2026</h1>
                   <p className="text-xs text-slate-300">Predice y compite</p>
                 </div>
               </div>
@@ -498,7 +498,7 @@ const Register = () => {
             </div>
 
             <p className="mt-6 text-center text-xs text-slate-400 lg:hidden">
-              Quiniela Lucalza · Lucalza
+              Quiniela 2026 · 2026 Mundial de Fútbol · Plataforma de quinielas deportivas
             </p>
           </div>
         </div>
