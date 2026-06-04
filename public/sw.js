@@ -13,7 +13,7 @@ self.addEventListener('push', (event) => {
   console.log('🔥 Push recibido en SW');
   
   let data = {
-    title: 'Quiniela Lucalza',
+    title: 'Quiniela 2026',
     body: 'Nueva notificación',
     icon: '/favicon.svg',
     url: '/'
