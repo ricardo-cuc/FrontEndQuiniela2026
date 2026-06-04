@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { User, LogOut, Shield, HelpCircle } from 'lucide-react';
+import { User, LogOut, Shield, HelpCircle, Home } from 'lucide-react';
 import { InfoTooltip } from '../common/InfoTooltip';
 
 const Navbar = () => {
@@ -78,16 +78,13 @@ const Navbar = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             
-            {/* Logo - Responsive */}
-            <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
-              <img 
-                src="/logo.png"
-                alt="Lucalza"
-                className="h-8 w-auto"
-              />
-              <span className="hidden sm:inline-block text-lg md:text-xl font-bold">
-                Quiniela Lucalza
-              </span>
+            {/* Casita / Home */}
+            <Link 
+              to="/" 
+              className="flex items-center justify-center p-2 rounded-full hover:bg-indigo-500 transition-colors"
+              title="Inicio"
+            >
+              <Home className="h-5 w-5" />
             </Link>
 
             {/* Menú de administrador - solo visible para admins en desktop */}
@@ -102,6 +99,9 @@ const Navbar = () => {
                 </Link>
               </div>
             )}
+
+            {/* Espaciador flexible para empujar los botones a la derecha */}
+            <div className="flex-1"></div>
 
             {/* Botón de ayuda */}
             <div className="relative" ref={helpMenuRef}>
@@ -147,7 +147,7 @@ const Navbar = () => {
                     <div className="border-t border-gray-200"></div>
                     <button
                       onClick={() => {
-                        window.open('https://wa.me/+50230339566?text=Necesito ayuda con Quiniela Lucalza', '_blank');
+                        window.open('https://wa.me/+50230339566?text=Necesito ayuda con Quiniela 2026', '_blank');
                         setShowHelpMenu(false);
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
@@ -163,7 +163,7 @@ const Navbar = () => {
             </div>
 
             {/* Menú de usuario */}
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative ml-2" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center justify-center p-2 rounded-full hover:bg-indigo-500 transition-colors"
