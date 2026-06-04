@@ -43,32 +43,32 @@ const Login = () => {
     setEsPrimeraVez(false);
   };
 
-  const socialLinks = [
-    {
-      name: 'Instagram',
-      url: 'https://www.instagram.com/lucalzaguatemala/?hl=es-la',
-      icon: FaInstagram,
-      color: 'hover:bg-pink-600',
-    },
-    {
-      name: 'Facebook',
-      url: 'https://www.facebook.com/lucalzaguate/?locale=es_LA',
-      icon: FaFacebook,
-      color: 'hover:bg-blue-600',
-    },
-    {
-      name: 'TikTok',
-      url: 'https://www.tiktok.com/@grupolucalza',
-      icon: FaTiktok,
-      color: 'hover:bg-black',
-    },
-    {
-      name: 'LinkedIn',
-      url: 'https://www.linkedin.com/company/grupo-lucalza/posts/?feedView=all',
-      icon: FaLinkedin,
-      color: 'hover:bg-blue-700',
-    },
-  ];
+  // const socialLinks = [
+  //   {
+  //     name: 'Instagram',
+  //     url: 'https://www.instagram.com/lucalzaguatemala/?hl=es-la',
+  //     icon: FaInstagram,
+  //     color: 'hover:bg-pink-600',
+  //   },
+  //   {
+  //     name: 'Facebook',
+  //     url: 'https://www.facebook.com/lucalzaguate/?locale=es_LA',
+  //     icon: FaFacebook,
+  //     color: 'hover:bg-blue-600',
+  //   },
+  //   {
+  //     name: 'TikTok',
+  //     url: 'https://www.tiktok.com/@grupolucalza',
+  //     icon: FaTiktok,
+  //     color: 'hover:bg-black',
+  //   },
+  //   {
+  //     name: 'LinkedIn',
+  //     url: 'https://www.linkedin.com/company/grupo-lucalza/posts/?feedView=all',
+  //     icon: FaLinkedin,
+  //     color: 'hover:bg-blue-700',
+  //   },
+  // ];
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -198,7 +198,7 @@ const Login = () => {
             <div className="flex items-start gap-3">
               <span className="text-2xl">🎉</span>
               <div className="flex-1">
-                <p className="font-semibold">¡Bienvenido a Quiniela Lucalza!</p>
+                <p className="font-semibold">¡Bienvenido a Quiniela 2026!</p>
                 <p className="text-sm opacity-95 mt-1">
                   ¿Es tu primera vez? Revisa la guía haciendo clic en el botón de ayuda.
                 </p>
@@ -235,22 +235,8 @@ const Login = () => {
       <div className="relative z-10 min-h-screen grid lg:grid-cols-2">
         {/* Panel izquierdo */}
         <div className="hidden lg:flex flex-col justify-between p-10 xl:p-14 text-white">
-          <div>
-            <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md shadow-xl">
-              <div className="rounded-xl bg-white/10 p-2 backdrop-blur-md">
-                <img
-                  src="/logo.png"
-                  alt="Lucalza"
-                  className="h-8 w-auto object-contain"
-                />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-white">Quiniela Lucalza</h1>
-                <p className="text-sm text-slate-300">Predice, compite y gana</p>
-              </div>
-            </div>
-          </div>
-
+          {/* Logo eliminado */}
+          
           <div className="max-w-xl">
             <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm text-emerald-300">
               <ShieldCheck className="h-4 w-4" />
@@ -273,7 +259,8 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-white/10">
+            {/* Sección de redes sociales comentada */}
+            {/* <div className="mt-8 pt-4 border-t border-white/10">
               <p className="text-sm text-slate-400 mb-3">Síguenos en redes</p>
               <div className="flex gap-3">
                 {socialLinks.map((social) => (
@@ -292,7 +279,7 @@ const Login = () => {
                   </a>
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="text-sm text-slate-400">
@@ -303,23 +290,8 @@ const Login = () => {
         {/* Panel derecho - FORMULARIO */}
         <div className="flex items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
           <div className="w-full max-w-md">
-            {/* Logo móvil */}
-            <div className="mb-6 flex justify-center lg:hidden">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white backdrop-blur-md shadow-xl">
-                <div className="rounded-xl bg-white/10 p-2 backdrop-blur-md">
-                  <img
-                    src="/logo.png"
-                    alt="Lucalza"
-                    className="h-7 w-auto object-contain"
-                  />
-                </div>
-                <div>
-                  <h1 className="text-base font-semibold text-white">Quiniela Lucalza</h1>
-                  <p className="text-xs text-slate-300">Predice y compite</p>
-                </div>
-              </div>
-            </div>
-
+            {/* Logo móvil eliminado */}
+            
             <div className="rounded-3xl border border-white/10 bg-white/80 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
               <div className="mb-8 text-center">
                 <h2 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -456,8 +428,8 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Redes Sociales en móvil */}
-                <div className="mt-6 pt-4 border-t border-slate-200 lg:hidden">
+                {/* Redes Sociales en móvil - COMENTADO */}
+                {/* <div className="mt-6 pt-4 border-t border-slate-200 lg:hidden">
                   <p className="text-center text-sm text-slate-600 mb-3">Síguenos en redes</p>
                   <div className="flex justify-center gap-4">
                     {socialLinks.map((social) => (
@@ -473,12 +445,12 @@ const Login = () => {
                       </a>
                     ))}
                   </div>
-                </div>
+                </div> */}
               </form>
             </div>
 
             <p className="mt-6 text-center text-xs text-slate-400 lg:hidden">
-              Quiniela Lucalza · Lucalza
+              Quiniela · 2026 Mundial de Fútbol · Plataforma de quinielas deportivas
             </p>
           </div>
         </div>
