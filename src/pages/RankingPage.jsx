@@ -1,13 +1,14 @@
 // src/pages/RankingPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Trophy, Medal, ArrowLeft, TrendingUp, Award, Star, RefreshCw, ChevronUp, ChevronDown, Bell, Wifi, WifiOff, X } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Trophy, Medal, ArrowLeft, TrendingUp, Award, Star, RefreshCw, ChevronUp, ChevronDown, Bell, X, Eye } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useSocket } from '../hooks/useSocket';
 
 const RankingPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [ranking, setRanking] = useState([]);
   const [previousRanking, setPreviousRanking] = useState({});
   const [loading, setLoading] = useState(true);
@@ -17,22 +18,17 @@ const RankingPage = () => {
   const [animating, setAnimating] = useState({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // 🔥 Socket.IO para tiempo real
   const { isConnected, lastMessage } = useSocket(id);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [rankingActualizado, setRankingActualizado] = useState(false);
 
-  // 🔥 Efecto para escuchar mensajes en tiempo real del ranking
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'RANKING_ACTUALIZADO') {
       setNotificationMessage('🏆 El ranking ha sido actualizado en tiempo real');
       setShowNotification(true);
       setRankingActualizado(true);
-      
-      // Recargar ranking silenciosamente
-      cargarRanking(true); // true = silencioso (sin mostrar loading)
-      
+      cargarRanking(true);
       setTimeout(() => {
         setShowNotification(false);
         setRankingActualizado(false);
@@ -40,10 +36,7 @@ const RankingPage = () => {
     } else if (lastMessage && lastMessage.type === 'RESULTADO_ACTUALIZADO') {
       setNotificationMessage(`⚽ Resultado actualizado: ${lastMessage.partido?.EQUIPO_1_NOMBRE} vs ${lastMessage.partido?.EQUIPO_2_NOMBRE}`);
       setShowNotification(true);
-      
-      // Recargar ranking silenciosamente
       cargarRanking(true);
-      
       setTimeout(() => {
         setShowNotification(false);
       }, 4000);
@@ -58,7 +51,6 @@ const RankingPage = () => {
         setIsRefreshing(true);
       }
       
-      // Guardar ranking anterior para detectar cambios
       const previous = {};
       ranking.forEach((item, idx) => {
         previous[item.U_CODIGO] = idx;
@@ -68,7 +60,6 @@ const RankingPage = () => {
       const response = await api.get(`/api/quinielas/${id}/ranking`);
       const newRanking = response.data.data || [];
       
-      // Detectar cambios de posición para animar
       const posicionCambios = {};
       newRanking.forEach((item, newPos) => {
         const oldPos = previous[item.U_CODIGO];
@@ -85,7 +76,6 @@ const RankingPage = () => {
         setQuinielaNombre(newRanking[0].NOMBRE_QUINIELA);
       }
       
-      // Limpiar animaciones después de 2 segundos
       setTimeout(() => {
         setAnimating({});
       }, 2000);
@@ -94,7 +84,6 @@ const RankingPage = () => {
       if (!silencioso) {
         toast.error('Error al cargar ranking');
       }
-      //console.error(error);
     } finally {
       if (!silencioso) {
         setLoading(false);
@@ -108,16 +97,17 @@ const RankingPage = () => {
     cargarRanking();
   }, [id]);
 
-  // Auto-refresh cada 30 segundos (solo si no está conectado por Socket)
   useEffect(() => {
     if (!autoRefresh || isConnected) return;
-    
     const interval = setInterval(() => {
       cargarRanking(true);
     }, 30000);
-    
     return () => clearInterval(interval);
   }, [autoRefresh, cargarRanking, isConnected]);
+
+  const verPronosticosUsuario = (usuarioCodigo) => {
+    navigate(`/quinielas/${id}/pronosticos/${usuarioCodigo}`);
+  };
 
   const getMedalIcon = (posicion) => {
     if (posicion === 1) return <Medal className="h-6 w-6 text-yellow-500" />;
@@ -143,15 +133,12 @@ const RankingPage = () => {
 
   return (
     <div>
-      {/* 🔥 Notificación en tiempo real */}
       {showNotification && (
         <div className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white rounded-lg shadow-lg p-4 max-w-md flex items-center gap-3 animate-slide-up">
           <Bell className="h-5 w-5" />
           <div className="flex-1">
             <p className="text-sm font-medium">{notificationMessage}</p>
-            <p className="text-xs opacity-75">
-              {new Date().toLocaleTimeString()}
-            </p>
+            <p className="text-xs opacity-75">{new Date().toLocaleTimeString()}</p>
           </div>
           <button onClick={() => setShowNotification(false)} className="text-white hover:text-gray-200">
             <X className="h-4 w-4" />
@@ -159,7 +146,6 @@ const RankingPage = () => {
         </div>
       )}
 
-      {/* 🔥 Indicador de ranking actualizado */}
       {rankingActualizado && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white rounded-lg shadow-lg p-3 animate-slide-down">
           <TrendingUp className="h-5 w-5 inline mr-2" />
@@ -167,10 +153,9 @@ const RankingPage = () => {
         </div>
       )}
 
-
-      <Link to="/mis-quinielas" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
+      <Link to={`/quinielas/${id}`} className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Volver a Mis Quinielas
+        Volver a la Quiniela
       </Link>
 
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white mb-8">
@@ -224,19 +209,20 @@ const RankingPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Predicciones</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exactos</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Efectividad</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {ranking.map((item, index) => {
                 const position = index + 1;
                 const cambio = animating[item.U_CODIGO];
-                const animationClass = cambio === 'up' ? 'animate-bounce-up bg-green-50' : 
-                                      cambio === 'down' ? 'animate-bounce-down bg-red-50' : '';
+                const animationClass = cambio === 'up' ? 'animate-bounce-up bg-green-50' : cambio === 'down' ? 'animate-bounce-down bg-red-50' : '';
                 
                 return (
                   <tr 
                     key={item.U_CODIGO} 
-                    className={`${position <= 3 ? 'bg-gradient-to-r from-yellow-50 to-transparent' : ''} ${animationClass} transition-all duration-500`}
+                    className={`${position <= 3 ? 'bg-gradient-to-r from-yellow-50 to-transparent' : ''} ${animationClass} transition-all duration-500 hover:bg-gray-50 cursor-pointer`}
+                    onClick={() => verPronosticosUsuario(item.U_CODIGO)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -249,10 +235,12 @@ const RankingPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
-                        {item.U_NOMBRE} {item.U_APELLIDO}
+                      <div className="group">
+                        <div className="font-medium text-gray-900 group-hover:text-indigo-600 group-hover:underline transition">
+                          {item.U_NOMBRE} {item.U_APELLIDO}
+                        </div>
+                        <div className="text-xs text-gray-500">{item.U_CODIGO}</div>
                       </div>
-                      <div className="text-xs text-gray-500">{item.U_CODIGO}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1">
@@ -266,7 +254,7 @@ const RankingPage = () => {
                       <div className="flex items-center gap-1">
                         <Award className="h-4 w-4 text-green-500" />
                         <span className="text-sm font-semibold text-green-600">
-                          {item.TOTAL_ACIERTOS  || 0}
+                          {item.TOTAL_ACIERTOS || 0}
                         </span>
                         <span className="text-xs text-gray-400">
                           / {item.TOTAL_PREDICCIONES || 0}
@@ -287,15 +275,30 @@ const RankingPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(item.PORCENTAJE_ACIERTO || 0, 100)}%` }}
-                        />
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(item.PORCENTAJE_ACIERTO || 0, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {item.PORCENTAJE_ACIERTO || 0}%
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {item.PORCENTAJE_ACIERTO || 0}%
-                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          verPronosticosUsuario(item.U_CODIGO);
+                        }}
+                        className="flex items-center gap-1 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100 transition text-sm"
+                        title="Ver pronósticos"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Ver
+                      </button>
                     </td>
                   </tr>
                 );
@@ -313,7 +316,6 @@ const RankingPage = () => {
         )}
       </div>
 
-      {/* Animaciones CSS */}
       <style>{`
         @keyframes bounceUp {
           0%, 100% { transform: translateY(0); background-color: transparent; }
