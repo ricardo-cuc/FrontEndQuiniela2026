@@ -17,6 +17,7 @@ import RankingPage from './pages/RankingPage';
 import MisPrediccionesPage from './pages/MisPrediccionesPage';
 import MisQuinielasPage from './pages/MisQuinielasPage';
 import PronosticosQuinielaPage from './pages/PronosticosQuinielaPage';
+import PronosticosUsuarioPage from './pages/PronosticosUsuarioPage';
 import MisAciertosPage from './pages/MisAciertosPage';
 
 import PushNotificaciones from './components/PushNotificaciones';
@@ -121,7 +122,6 @@ function SessionMonitor() {
   useEffect(() => {
     const handleSessionExpired = () => {
       if (isAuthenticated) {
-        //console.log('Sesión expirada, redirigiendo al login...');
         logout();
         navigate('/login', { 
           state: { message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' }
@@ -149,30 +149,24 @@ function SocketManager() {
   const MAX_RECONNECT_ATTEMPTS = 10;
 
   const registerUserPresence = () => {
-    // Verificar conexión del socket
     if (!globalSocket?.connected) {
-      //console.log('❌ [SOCKET] No conectado');
       return;
     }
     
     if (!isAuthenticated) {
-      //console.log('❌ [SOCKET] Usuario no autenticado');
       return;
     }
     
     if (isRegisteredRef.current) {
-      //console.log('⚠️ [SOCKET] Ya registrado, omitiendo');
       return;
     }
 
-    // ✅ Obtener usuario del sessionStorage como fallback
     let userData = user;
     if (!userData || !userData.U_CODIGO) {
       const storedUser = sessionStorage.getItem('user');
       if (storedUser) {
         try {
           userData = JSON.parse(storedUser);
-          //console.log('📝 [SOCKET] Usuario obtenido de sessionStorage:', userData);
         } catch (e) {
           console.error('❌ [SOCKET] Error parsing sessionStorage user:', e);
         }
@@ -181,13 +175,6 @@ function SocketManager() {
     
     const uCodigo = userData?.U_CODIGO;
     const nombre = `${userData?.U_NOMBRE || ''} ${userData?.U_APELLIDO || ''}`.trim() || userData?.U_CORREO || 'Usuario';
-    
-    //console.log('=========================================');
-    //console.log('🔴 [SOCKET] REGISTRANDO USUARIO:');
-    //console.log('   - userData:', userData);
-    //console.log('   - uCodigo encontrado:', uCodigo);
-    //console.log('   - nombreCompleto:', nombre);
-    //console.log('=========================================');
     
     if (!uCodigo) {
       console.error('❌ [SOCKET] No se puede registrar: U_CODIGO es undefined');
@@ -199,21 +186,15 @@ function SocketManager() {
       nombre: nombre
     };
     
-    //console.log('📤 [SOCKET] Enviando al servidor:', datosEnvio);
-    
     globalSocket.emit('registrar-usuario', datosEnvio);
     isRegisteredRef.current = true;
-    
-    //console.log('✅ [SOCKET] Evento registrar-usuario enviado');
   };
 
   const setupSocket = () => {
     if (!isAuthenticated) {
-      //console.log('❌ [SOCKET] No autenticado, no se crea socket');
       return;
     }
     
-    // Verificar si tenemos un código de usuario válido
     let userCodigo = user?.U_CODIGO;
     if (!userCodigo) {
       const storedUser = sessionStorage.getItem('user');
@@ -226,12 +207,10 @@ function SocketManager() {
     }
     
     if (!userCodigo) {
-      //console.log('❌ [SOCKET] No hay U_CODIGO, esperando...');
       return;
     }
 
     if (globalSocket?.connected) {
-      //console.log('✅ [SOCKET] Usando socket existente');
       registerUserPresence();
       return;
     }
@@ -241,7 +220,6 @@ function SocketManager() {
       globalSocket = null;
     }
 
-    //console.log('🔌 [SOCKET] Creando nueva conexión socket...');
     globalSocket = io(API_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -259,14 +237,12 @@ function SocketManager() {
     });
 
     globalSocket.on('connect', () => {
-      //console.log('✅ [SOCKET] Socket conectado correctamente');
       reconnectAttempts.current = 0;
       isRegisteredRef.current = false;
       registerUserPresence();
     });
 
     globalSocket.on('reconnect', (attemptNumber) => {
-      //console.log(`🔄 [SOCKET] Reconectado después de ${attemptNumber} intentos`);
       isRegisteredRef.current = false;
       registerUserPresence();
     });
@@ -281,7 +257,6 @@ function SocketManager() {
     });
 
     globalSocket.on('disconnect', (reason) => {
-      //console.log(`🔌 [SOCKET] Desconectado: ${reason}`);
       isRegisteredRef.current = false;
       
       if (reason === 'io server disconnect') {
@@ -313,7 +288,6 @@ function SocketManager() {
     if (isAuthenticated) {
       setupSocket();
     } else if (!isAuthenticated && globalSocket) {
-      //console.log('🔌 [SOCKET] Cerrando socket por logout');
       globalSocket.disconnect();
       globalSocket = null;
       isRegisteredRef.current = false;
@@ -326,7 +300,6 @@ function SocketManager() {
     const handleVisibilityChange = () => {
       if (!document.hidden && isAuthenticated) {
         if (!globalSocket?.connected) {
-          //console.log('📱 [SOCKET] Página visible, reconectando...');
           setupSocket();
         } else if (globalSocket?.connected && !isRegisteredRef.current) {
           registerUserPresence();
@@ -335,7 +308,6 @@ function SocketManager() {
     };
 
     const handleOnline = () => {
-      //console.log('🌐 [SOCKET] Red recuperada, reconectando...');
       if (isAuthenticated) {
         setupSocket();
       }
@@ -366,11 +338,17 @@ function AppRoutes() {
         <Route path="/" element={<PrivateRoute><PrivateLayout><HomePage /></PrivateLayout></PrivateRoute>} />
         <Route path="/quinielas" element={<PrivateRoute><PrivateLayout><QuinielasPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/quinielas/:id" element={<PrivateRoute><PrivateLayout><QuinielaDetailPage /></PrivateLayout></PrivateRoute>} />
+        
+        {/* 👇 RUTAS DEL RANKING - AMBAS VERSIONES */}
+        <Route path="/quinielas/:id/ranking" element={<PrivateRoute><PrivateLayout><RankingPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/ranking/:id" element={<PrivateRoute><PrivateLayout><RankingPage /></PrivateLayout></PrivateRoute>} />
+        
+        <Route path="/quinielas/:quinielaId/pronosticos/:usuarioCodigo" element={<PrivateRoute><PrivateLayout><PronosticosUsuarioPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/mis-predicciones" element={<PrivateRoute><PrivateLayout><MisPrediccionesPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/mis-aciertos" element={<PrivateRoute><PrivateLayout><MisAciertosPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/mis-quinielas" element={<PrivateRoute><PrivateLayout><MisQuinielasPage /></PrivateLayout></PrivateRoute>} />
         <Route path="/quinielas/:id/pronosticos" element={<PrivateRoute><PrivateLayout><PronosticosQuinielaPage /></PrivateLayout></PrivateRoute>} />
+        
         <Route path="/admin" element={<AdminRoute><PrivateLayout><AdminPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/campeonatos" element={<AdminRoute><PrivateLayout><CampeonatosPage /></PrivateLayout></AdminRoute>} />
         <Route path="/admin/campeonatos/:C_CAMPEONATO" element={<AdminRoute><PrivateLayout><CampeonatoDetallePage /></PrivateLayout></AdminRoute>} />
