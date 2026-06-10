@@ -94,7 +94,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
   const cargarEmojis = async () => {
     const cachedEmojis = getEmojisFromCache();
     if (cachedEmojis) {
-      console.log('📦 Emojis desde caché local');
+      //console.log('📦 Emojis desde caché local');
       setEmojisDisponibles(cachedEmojis);
       
       const porCategoria = {};
@@ -215,7 +215,7 @@ export const ModalParticipantes = ({ isOpen, onClose, quinielaId, quinielaNombre
         });
 
         socketRef.current.on('disconnect', () => {
-          console.log('🔌 Desconectado del chat');
+          //console.log('🔌 Desconectado del chat');
           setIsConnected(false);
         });
 
