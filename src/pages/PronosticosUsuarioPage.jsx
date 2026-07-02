@@ -12,7 +12,7 @@ const PronosticosUsuarioPage = () => {
   const [usuarioInfo, setUsuarioInfo] = useState(null);
   const [quinielaInfo, setQuinielaInfo] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState('todos');
-  const [orden, setOrden] = useState('fecha'); // fecha, puntos, equipo
+  const [orden, setOrden] = useState('finalizacion'); // nuevo orden por defecto
 
   useEffect(() => {
     cargarPronosticosUsuario();
@@ -76,19 +76,67 @@ const PronosticosUsuarioPage = () => {
     return <span className="text-red-400">✗</span>;
   };
 
-  // Ordenar partidos
+  // NUEVA FUNCIÓN DE ORDENAMIENTO MEJORADA
   const partidosOrdenados = [...partidos].sort((a, b) => {
-    if (orden === 'fecha') {
-      return new Date(a.FECHA) - new Date(b.FECHA);
-    } else if (orden === 'puntos') {
-      return (b.PUNTOS_OBTENIDOS || 0) - (a.PUNTOS_OBTENIDOS || 0);
-    } else if (orden === 'equipo') {
-      return a.EQUIPO_1_NOMBRE.localeCompare(b.EQUIPO_1_NOMBRE);
+    const aFinalizado = isPartidoFinalizado(a);
+    const bFinalizado = isPartidoFinalizado(b);
+
+    // Primero: Separar finalizados de pendientes
+    if (aFinalizado && !bFinalizado) return -1; // Finalizados primero
+    if (!aFinalizado && bFinalizado) return 1;  // Pendientes después
+
+    // Si ambos están finalizados: ordenar por fecha de finalización (más reciente primero)
+    if (aFinalizado && bFinalizado) {
+      // Usar la fecha del partido como proxy de finalización
+      // Asumimos que la fecha de finalización es la fecha del partido cuando se marcó como finalizado
+      const fechaA = new Date(a.FECHA_FINALIZACION || a.FECHA);
+      const fechaB = new Date(b.FECHA_FINALIZACION || b.FECHA);
+      return fechaB - fechaA; // Más reciente primero
     }
+
+    // Si ambos están pendientes: ordenar por fecha (más próximo primero)
+    if (!aFinalizado && !bFinalizado) {
+      const fechaA = new Date(a.FECHA);
+      const fechaB = new Date(b.FECHA);
+      return fechaA - fechaB; // Más próximo primero
+    }
+
     return 0;
   });
 
-  const partidosFiltrados = partidosOrdenados.filter(partido => {
+  // Función de ordenamiento alternativa si no tienes FECHA_FINALIZACION
+  // Esta versión usa el estado y la fecha como criterio
+  const partidosOrdenadosAlternativo = [...partidos].sort((a, b) => {
+    const aFinalizado = isPartidoFinalizado(a);
+    const bFinalizado = isPartidoFinalizado(b);
+
+    // Primero: Separar finalizados de pendientes
+    if (aFinalizado && !bFinalizado) return -1;
+    if (!aFinalizado && bFinalizado) return 1;
+
+    // Si ambos están finalizados: ordenar por puntos (de mayor a menor) y luego por fecha
+    if (aFinalizado && bFinalizado) {
+      // Primero por puntos (más puntos primero)
+      if ((a.PUNTOS_OBTENIDOS || 0) !== (b.PUNTOS_OBTENIDOS || 0)) {
+        return (b.PUNTOS_OBTENIDOS || 0) - (a.PUNTOS_OBTENIDOS || 0);
+      }
+      // Si mismos puntos, por fecha (más reciente primero)
+      return new Date(b.FECHA) - new Date(a.FECHA);
+    }
+
+    // Si ambos están pendientes: ordenar por fecha (más próximo primero)
+    if (!aFinalizado && !bFinalizado) {
+      return new Date(a.FECHA) - new Date(b.FECHA);
+    }
+
+    return 0;
+  });
+
+  // Puedes elegir cualquiera de las dos funciones de ordenamiento
+  // Usamos la primera por defecto, pero puedes cambiar a partidosOrdenadosAlternativo
+  const partidosFinalOrdenados = partidosOrdenados;
+
+  const partidosFiltrados = partidosFinalOrdenados.filter(partido => {
     if (filtroEstado === 'todos') return true;
     if (filtroEstado === 'finalizados') return isPartidoFinalizado(partido);
     if (filtroEstado === 'pendientes') return !isPartidoFinalizado(partido);
@@ -119,7 +167,7 @@ const PronosticosUsuarioPage = () => {
         Volver al Ranking
       </Link>
 
-      {/* Header del usuario - Versión compacta y profesional */}
+      {/* Header del usuario */}
       {usuarioInfo && (
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl p-6 text-white mb-8">
           <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6">
@@ -220,8 +268,9 @@ const PronosticosUsuarioPage = () => {
             onChange={(e) => setOrden(e.target.value)}
             className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="fecha">Fecha</option>
-            <option value="puntos">Puntos</option>
+            <option value="finalizacion">Finalización (Reciente)</option>
+            <option value="puntos">Puntos (Mayor)</option>
+            <option value="fecha">Fecha (Próximo)</option>
             <option value="equipo">Equipo</option>
           </select>
         </div>
@@ -274,7 +323,7 @@ const PronosticosUsuarioPage = () => {
                   const tienePronostico = partido.YA_PREDICHO === 1;
                   
                   return (
-                    <tr key={partido.NRO_PARTIDO} className="hover:bg-gray-50 transition-colors">
+                    <tr key={partido.NRO_PARTIDO} className={`hover:bg-gray-50 transition-colors ${finalizado ? 'bg-green-50/30' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {index + 1}
                       </td>
@@ -361,7 +410,7 @@ const PronosticosUsuarioPage = () => {
               const tienePronostico = partido.YA_PREDICHO === 1;
               
               return (
-                <div key={partido.NRO_PARTIDO} className="p-4 hover:bg-gray-50 transition-colors">
+                <div key={partido.NRO_PARTIDO} className={`p-4 hover:bg-gray-50 transition-colors ${finalizado ? 'bg-green-50/20' : ''}`}>
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
