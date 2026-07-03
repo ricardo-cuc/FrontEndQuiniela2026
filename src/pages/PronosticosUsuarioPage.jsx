@@ -76,14 +76,14 @@ const PronosticosUsuarioPage = () => {
       if (data.quiniela) setQuinielaInfo(data.quiniela);
       if (data.metadata) setMetadata(data.metadata);
       
-      console.log('📊 Datos cargados:', {
-        partidos: data.partidos?.length || 0,
-        fases: data.metadata?.fasesDisponibles || [],
-        usuario: data.usuario?.U_NOMBRE
-      });
+      // console.log('📊 Datos cargados:', {
+      //   partidos: data.partidos?.length || 0,
+      //   fases: data.metadata?.fasesDisponibles || [],
+      //   usuario: data.usuario?.U_NOMBRE
+      // });
       
     } catch (error) {
-      console.error('❌ Error cargando pronósticos:', error);
+      // console.error('❌ Error cargando pronósticos:', error);
       toast.error('Error al cargar los pronósticos del usuario');
     } finally {
       setLoading(false);
