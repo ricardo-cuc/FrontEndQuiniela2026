@@ -4,7 +4,8 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   Calendar, CheckCircle, ArrowLeft, Trophy, User, Award, Target, 
   AlertCircle, Lock, Filter, Search, FileCheck, Clock, Zap, 
-  X, ChevronDown, ChevronUp, ArrowUpDown, Layers, Circle
+  X, ChevronDown, ChevronUp, ArrowUpDown, Layers, Circle,
+  Eye, EyeOff
 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -19,6 +20,11 @@ const PronosticosUsuarioPage = () => {
   const [usuarioInfo, setUsuarioInfo] = useState(null);
   const [quinielaInfo, setQuinielaInfo] = useState(null);
   const [metadata, setMetadata] = useState(null);
+  
+  // ============================================
+  // NUEVO: Estado para ocultar/mostrar filtros
+  // ============================================
+  const [mostrarFiltros, setMostrarFiltros] = useState(true);
   
   // Estados de filtros
   const [filtroEstado, setFiltroEstado] = useState('todos');
@@ -76,14 +82,7 @@ const PronosticosUsuarioPage = () => {
       if (data.quiniela) setQuinielaInfo(data.quiniela);
       if (data.metadata) setMetadata(data.metadata);
       
-      // console.log('📊 Datos cargados:', {
-      //   partidos: data.partidos?.length || 0,
-      //   fases: data.metadata?.fasesDisponibles || [],
-      //   usuario: data.usuario?.U_NOMBRE
-      // });
-      
     } catch (error) {
-      // console.error('❌ Error cargando pronósticos:', error);
       toast.error('Error al cargar los pronósticos del usuario');
     } finally {
       setLoading(false);
@@ -106,7 +105,6 @@ const PronosticosUsuarioPage = () => {
     const predLocal = partido.GOLES_LOCAL_PRED;
     const predVisit = partido.GOLES_VISITANTE_PRED;
     
-    // Verificar que los datos existen
     if (realLocal === null || realLocal === undefined || 
         realVisit === null || realVisit === undefined ||
         predLocal === null || predLocal === undefined ||
@@ -207,14 +205,12 @@ const PronosticosUsuarioPage = () => {
   const partidosFiltrados = useMemo(() => {
     let filtrados = partidosOrdenados;
     
-    // Filtro por estado
     if (filtroEstado === 'finalizados') {
       filtrados = filtrados.filter(p => isPartidoFinalizado(p));
     } else if (filtroEstado === 'pendientes') {
       filtrados = filtrados.filter(p => !isPartidoFinalizado(p));
     }
     
-    // Filtro por tipo de acierto
     if (filtroAcierto !== 'todos') {
       filtrados = filtrados.filter(p => {
         if (!isPartidoFinalizado(p) || p.YA_PREDICHO !== 1) return false;
@@ -224,19 +220,16 @@ const PronosticosUsuarioPage = () => {
       });
     }
     
-    // Filtro por pronóstico
     if (filtroPronostico === 'llenado') {
       filtrados = filtrados.filter(p => p.YA_PREDICHO === 1);
     } else if (filtroPronostico === 'no-llenado') {
       filtrados = filtrados.filter(p => p.YA_PREDICHO !== 1);
     }
     
-    // Filtro por fase
     if (filtroFase !== 'todas') {
       filtrados = filtrados.filter(p => p.FASE === filtroFase);
     }
     
-    // Filtros avanzados
     if (filtrosAvanzados.soloConPuntos) {
       filtrados = filtrados.filter(p => (p.PUNTOS_OBTENIDOS || 0) > 0);
     }
@@ -256,7 +249,6 @@ const PronosticosUsuarioPage = () => {
       });
     }
     
-    // Rango de fechas
     if (filtrosAvanzados.fechaDesde) {
       const fechaDesde = new Date(filtrosAvanzados.fechaDesde);
       filtrados = filtrados.filter(p => new Date(p.FECHA) >= fechaDesde);
@@ -268,12 +260,10 @@ const PronosticosUsuarioPage = () => {
       filtrados = filtrados.filter(p => new Date(p.FECHA) <= fechaHasta);
     }
     
-    // Rango de puntos
     if (filtrosAvanzados.rangoPuntos[1] < 100) {
       filtrados = filtrados.filter(p => (p.PUNTOS_OBTENIDOS || 0) <= filtrosAvanzados.rangoPuntos[1]);
     }
     
-    // Búsqueda
     if (busqueda.trim()) {
       const term = busqueda.toLowerCase().trim();
       filtrados = filtrados.filter(p => 
@@ -291,7 +281,6 @@ const PronosticosUsuarioPage = () => {
   // ESTADÍSTICAS
   // ============================================
   const stats = useMemo(() => {
-    // Si tenemos metadata del backend, usarla
     if (metadata?.resumen) {
       const fasesStats = {};
       metadata.fasesDisponibles?.forEach(fase => {
@@ -303,7 +292,6 @@ const PronosticosUsuarioPage = () => {
         };
       });
 
-      // Calcular aciertos desde los partidos
       const finalizados = partidos.filter(p => isPartidoFinalizado(p));
       const exactos = finalizados.filter(p => {
         if (p.YA_PREDICHO !== 1) return false;
@@ -345,7 +333,6 @@ const PronosticosUsuarioPage = () => {
       };
     }
 
-    // Fallback: calcular en frontend
     const total = partidos.length;
     const finalizados = partidos.filter(p => isPartidoFinalizado(p));
     const pendientes = partidos.filter(p => !isPartidoFinalizado(p));
@@ -434,7 +421,6 @@ const PronosticosUsuarioPage = () => {
     });
   };
 
-  // Contar filtros activos
   const filtrosActivos = [
     filtroEstado !== 'todos',
     filtroAcierto !== 'todos',
@@ -539,382 +525,420 @@ const PronosticosUsuarioPage = () => {
       )}
 
       {/* ==========================================
-          SECCIÓN DE FILTROS
+          BOTÓN PARA OCULTAR/MOSTRAR FILTROS
           ========================================== */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          onClick={() => setMostrarFiltros(!mostrarFiltros)}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+        >
+          {mostrarFiltros ? (
+            <>
+              <EyeOff className="h-4 w-4" />
+              Ocultar filtros
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4" />
+              Mostrar filtros
+            </>
+          )}
+          {filtrosActivos > 0 && (
+            <span className="ml-1 bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-xs font-medium">
+              {filtrosActivos}
+            </span>
+          )}
+        </button>
         
-        {/* NIVEL 1: Barra Superior Integrada */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex-1 w-full sm:w-auto relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar partido, equipo o fase..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
-              />
-            </div>
-
-            <div className="text-sm text-gray-500 whitespace-nowrap">
-              <span className="font-medium text-gray-700">{partidosFiltrados.length}</span> resultados
-            </div>
-
-            {filtrosActivos > 0 && (
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-gray-300">|</span>
-                <span className="text-gray-500">Filtros:</span>
-                <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-xs font-medium">
-                  {filtrosActivos} activos
-                </span>
-              </div>
-            )}
-
-            <button
-              onClick={limpiarFiltros}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                filtrosActivos > 0 || busqueda
-                  ? 'text-gray-700 hover:bg-gray-100'
-                  : 'text-gray-300 cursor-not-allowed'
-              }`}
-              disabled={filtrosActivos === 0 && !busqueda}
-            >
-              <X className="h-4 w-4" />
-              Limpiar
-            </button>
+        {/* Indicador de filtros activos cuando están ocultos */}
+        {!mostrarFiltros && filtrosActivos > 0 && (
+          <div className="text-sm text-gray-500">
+            <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-xs font-medium">
+              {filtrosActivos} filtro{filtrosActivos !== 1 ? 's' : ''} activo{filtrosActivos !== 1 ? 's' : ''}
+            </span>
           </div>
-
-          {/* Chips de filtros activos */}
-          {(filtroEstado !== 'todos' || filtroAcierto !== 'todos' || 
-            filtroPronostico !== 'todos' || filtroFase !== 'todas') && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
-              {filtroEstado !== 'todos' && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
-                  Estado: {filtroEstado}
-                  <button onClick={() => setFiltroEstado('todos')} className="hover:text-red-500">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
-              {filtroAcierto !== 'todos' && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
-                  Acierto: {filtroAcierto}
-                  <button onClick={() => setFiltroAcierto('todos')} className="hover:text-red-500">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
-              {filtroPronostico !== 'todos' && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
-                  Pronóstico: {filtroPronostico}
-                  <button onClick={() => setFiltroPronostico('todos')} className="hover:text-red-500">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
-              {filtroFase !== 'todas' && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
-                  Fase: {filtroFase}
-                  <button onClick={() => setFiltroFase('todas')} className="hover:text-red-500">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* NIVEL 2: Filtros Rápidos */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* Estado */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <Clock className="h-3.5 w-3.5" />
-                Estado
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <FilterChip
-                  active={filtroEstado === 'todos'}
-                  onClick={() => setFiltroEstado('todos')}
-                  count={stats.total}
-                >
-                  Todos
-                </FilterChip>
-                <FilterChip
-                  active={filtroEstado === 'finalizados'}
-                  onClick={() => setFiltroEstado('finalizados')}
-                  count={stats.finalizados}
-                  variant="success"
-                >
-                  Finalizados
-                </FilterChip>
-                <FilterChip
-                  active={filtroEstado === 'pendientes'}
-                  onClick={() => setFiltroEstado('pendientes')}
-                  count={stats.pendientes}
-                  variant="warning"
-                >
-                  Pendientes
-                </FilterChip>
-              </div>
-            </div>
-
-            {/* Acierto */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <Target className="h-3.5 w-3.5" />
-                Acierto
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <FilterChip
-                  active={filtroAcierto === 'todos'}
-                  onClick={() => setFiltroAcierto('todos')}
-                >
-                  Todos
-                </FilterChip>
-                <FilterChip
-                  active={filtroAcierto === 'exacto'}
-                  onClick={() => setFiltroAcierto('exacto')}
-                  count={stats.exactos}
-                  variant="exacto"
-                >
-                  Exactos
-                </FilterChip>
-                <FilterChip
-                  active={filtroAcierto === 'diferencia'}
-                  onClick={() => setFiltroAcierto('diferencia')}
-                  count={stats.diferencia}
-                  variant="diferencia"
-                >
-                  Diferencia
-                </FilterChip>
-                <FilterChip
-                  active={filtroAcierto === 'ganador'}
-                  onClick={() => setFiltroAcierto('ganador')}
-                  count={stats.ganador}
-                  variant="ganador"
-                >
-                  Ganador
-                </FilterChip>
-                <FilterChip
-                  active={filtroAcierto === 'fallo'}
-                  onClick={() => setFiltroAcierto('fallo')}
-                  count={stats.fallos}
-                  variant="fallo"
-                >
-                  Fallos
-                </FilterChip>
-              </div>
-            </div>
-
-            {/* Pronóstico */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <CheckCircle className="h-3.5 w-3.5" />
-                Pronóstico
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <FilterChip
-                  active={filtroPronostico === 'todos'}
-                  onClick={() => setFiltroPronostico('todos')}
-                >
-                  Todos
-                </FilterChip>
-                <FilterChip
-                  active={filtroPronostico === 'llenado'}
-                  onClick={() => setFiltroPronostico('llenado')}
-                  count={stats.conPronostico}
-                  variant="info"
-                >
-                  Llenados
-                </FilterChip>
-                <FilterChip
-                  active={filtroPronostico === 'no-llenado'}
-                  onClick={() => setFiltroPronostico('no-llenado')}
-                  count={stats.sinPronostico}
-                  variant="neutral"
-                >
-                  No llenados
-                </FilterChip>
-              </div>
-            </div>
-
-            {/* Fase */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <Layers className="h-3.5 w-3.5" />
-                Fase
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <FilterChip
-                  active={filtroFase === 'todas'}
-                  onClick={() => setFiltroFase('todas')}
-                  count={stats.total}
-                >
-                  Todas
-                </FilterChip>
-                {fasesUnicas.map(fase => {
-                  const count = partidos.filter(p => p.FASE === fase).length;
-                  return (
-                    <FilterChip
-                      key={fase}
-                      active={filtroFase === fase}
-                      onClick={() => setFiltroFase(fase)}
-                      count={count}
-                      variant="neutral"
-                    >
-                      {fase}
-                    </FilterChip>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Ordenar */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <ArrowUpDown className="h-3.5 w-3.5" />
-                Ordenar por
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <select
-                  value={orden}
-                  onChange={(e) => setOrden(e.target.value)}
-                  className="h-8 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
-                >
-                  <option value="fecha">Fecha</option>
-                  <option value="puntos">Puntos</option>
-                  <option value="equipo">Equipo</option>
-                  <option value="fase">Fase</option>
-                  <option value="finalizacion">Finalización</option>
-                </select>
-                <button
-                  onClick={() => setOrdenDireccion(ordenDireccion === 'asc' ? 'desc' : 'asc')}
-                  className="h-8 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-gray-100 transition"
-                >
-                  {ordenDireccion === 'asc' ? '↑' : '↓'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* NIVEL 3: Filtros Avanzados */}
-        <div className="p-2">
-          <button
-            onClick={() => setMostrarAvanzados(!mostrarAvanzados)}
-            className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg transition"
-          >
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Filter className="h-4 w-4" />
-              <span>Filtros avanzados</span>
-              {[filtrosAvanzados.soloConPuntos, filtrosAvanzados.ocultarFallos, 
-                filtrosAvanzados.mostrarEmpates, !!filtrosAvanzados.fechaDesde, 
-                !!filtrosAvanzados.fechaHasta, filtrosAvanzados.rangoPuntos[1] < 100]
-                .some(v => v) && (
-                <span className="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded text-xs font-medium">
-                  Activos
-                </span>
-              )}
-            </div>
-            {mostrarAvanzados ? (
-              <ChevronUp className="h-4 w-4 text-gray-400" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            )}
-          </button>
-
-          {mostrarAvanzados && (
-            <div className="px-3 pb-3 pt-1 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
-                    <input
-                      type="checkbox"
-                      checked={filtrosAvanzados.soloConPuntos}
-                      onChange={(e) => setFiltrosAvanzados({
-                        ...filtrosAvanzados,
-                        soloConPuntos: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Solo partidos con puntos
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
-                    <input
-                      type="checkbox"
-                      checked={filtrosAvanzados.ocultarFallos}
-                      onChange={(e) => setFiltrosAvanzados({
-                        ...filtrosAvanzados,
-                        ocultarFallos: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Ocultar fallos
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
-                    <input
-                      type="checkbox"
-                      checked={filtrosAvanzados.mostrarEmpates}
-                      onChange={(e) => setFiltrosAvanzados({
-                        ...filtrosAvanzados,
-                        mostrarEmpates: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Mostrar empates
-                  </label>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-600">Rango de fechas</label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="date"
-                      className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-                      value={filtrosAvanzados.fechaDesde || ''}
-                      onChange={(e) => setFiltrosAvanzados({
-                        ...filtrosAvanzados,
-                        fechaDesde: e.target.value
-                      })}
-                    />
-                    <span className="text-gray-400 self-center hidden sm:block">→</span>
-                    <input
-                      type="date"
-                      className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-                      value={filtrosAvanzados.fechaHasta || ''}
-                      onChange={(e) => setFiltrosAvanzados({
-                        ...filtrosAvanzados,
-                        fechaHasta: e.target.value
-                      })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <label>Rango de puntos</label>
-                    <span>0 - {filtrosAvanzados.rangoPuntos[1]}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={filtrosAvanzados.rangoPuntos[1]}
-                    onChange={(e) => setFiltrosAvanzados({
-                      ...filtrosAvanzados,
-                      rangoPuntos: [0, parseInt(e.target.value)]
-                    })}
-                    className="w-full accent-indigo-600"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* ==========================================
+          SECCIÓN DE FILTROS (con toggle para ocultar/mostrar)
+          ========================================== */}
+      {mostrarFiltros && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+          
+          {/* NIVEL 1: Barra Superior Integrada */}
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex-1 w-full sm:w-auto relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar partido, equipo o fase..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="w-full h-10 pl-9 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                />
+              </div>
+
+              <div className="text-sm text-gray-500 whitespace-nowrap">
+                <span className="font-medium text-gray-700">{partidosFiltrados.length}</span> resultados
+              </div>
+
+              {filtrosActivos > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-500">Filtros:</span>
+                  <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-xs font-medium">
+                    {filtrosActivos} activos
+                  </span>
+                </div>
+              )}
+
+              <button
+                onClick={limpiarFiltros}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  filtrosActivos > 0 || busqueda
+                    ? 'text-gray-700 hover:bg-gray-100'
+                    : 'text-gray-300 cursor-not-allowed'
+                }`}
+                disabled={filtrosActivos === 0 && !busqueda}
+              >
+                <X className="h-4 w-4" />
+                Limpiar
+              </button>
+            </div>
+
+            {/* Chips de filtros activos */}
+            {(filtroEstado !== 'todos' || filtroAcierto !== 'todos' || 
+              filtroPronostico !== 'todos' || filtroFase !== 'todas') && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                {filtroEstado !== 'todos' && (
+                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
+                    Estado: {filtroEstado}
+                    <button onClick={() => setFiltroEstado('todos')} className="hover:text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {filtroAcierto !== 'todos' && (
+                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
+                    Acierto: {filtroAcierto}
+                    <button onClick={() => setFiltroAcierto('todos')} className="hover:text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {filtroPronostico !== 'todos' && (
+                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
+                    Pronóstico: {filtroPronostico}
+                    <button onClick={() => setFiltroPronostico('todos')} className="hover:text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {filtroFase !== 'todas' && (
+                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
+                    Fase: {filtroFase}
+                    <button onClick={() => setFiltroFase('todas')} className="hover:text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* NIVEL 2: Filtros Rápidos */}
+          <div className="p-4 border-b border-gray-100">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              {/* Estado */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <Clock className="h-3.5 w-3.5" />
+                  Estado
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <FilterChip
+                    active={filtroEstado === 'todos'}
+                    onClick={() => setFiltroEstado('todos')}
+                    count={stats.total}
+                  >
+                    Todos
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroEstado === 'finalizados'}
+                    onClick={() => setFiltroEstado('finalizados')}
+                    count={stats.finalizados}
+                    variant="success"
+                  >
+                    Finalizados
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroEstado === 'pendientes'}
+                    onClick={() => setFiltroEstado('pendientes')}
+                    count={stats.pendientes}
+                    variant="warning"
+                  >
+                    Pendientes
+                  </FilterChip>
+                </div>
+              </div>
+
+              {/* Acierto */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <Target className="h-3.5 w-3.5" />
+                  Acierto
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <FilterChip
+                    active={filtroAcierto === 'todos'}
+                    onClick={() => setFiltroAcierto('todos')}
+                  >
+                    Todos
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroAcierto === 'exacto'}
+                    onClick={() => setFiltroAcierto('exacto')}
+                    count={stats.exactos}
+                    variant="exacto"
+                  >
+                    Exactos
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroAcierto === 'diferencia'}
+                    onClick={() => setFiltroAcierto('diferencia')}
+                    count={stats.diferencia}
+                    variant="diferencia"
+                  >
+                    Diferencia
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroAcierto === 'ganador'}
+                    onClick={() => setFiltroAcierto('ganador')}
+                    count={stats.ganador}
+                    variant="ganador"
+                  >
+                    Ganador
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroAcierto === 'fallo'}
+                    onClick={() => setFiltroAcierto('fallo')}
+                    count={stats.fallos}
+                    variant="fallo"
+                  >
+                    Fallos
+                  </FilterChip>
+                </div>
+              </div>
+
+              {/* Pronóstico */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Pronóstico
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <FilterChip
+                    active={filtroPronostico === 'todos'}
+                    onClick={() => setFiltroPronostico('todos')}
+                  >
+                    Todos
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroPronostico === 'llenado'}
+                    onClick={() => setFiltroPronostico('llenado')}
+                    count={stats.conPronostico}
+                    variant="info"
+                  >
+                    Llenados
+                  </FilterChip>
+                  <FilterChip
+                    active={filtroPronostico === 'no-llenado'}
+                    onClick={() => setFiltroPronostico('no-llenado')}
+                    count={stats.sinPronostico}
+                    variant="neutral"
+                  >
+                    No llenados
+                  </FilterChip>
+                </div>
+              </div>
+
+              {/* Fase */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <Layers className="h-3.5 w-3.5" />
+                  Fase
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <FilterChip
+                    active={filtroFase === 'todas'}
+                    onClick={() => setFiltroFase('todas')}
+                    count={stats.total}
+                  >
+                    Todas
+                  </FilterChip>
+                  {fasesUnicas.map(fase => {
+                    const count = partidos.filter(p => p.FASE === fase).length;
+                    return (
+                      <FilterChip
+                        key={fase}
+                        active={filtroFase === fase}
+                        onClick={() => setFiltroFase(fase)}
+                        count={count}
+                        variant="neutral"
+                      >
+                        {fase}
+                      </FilterChip>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Ordenar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  Ordenar por
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <select
+                    value={orden}
+                    onChange={(e) => setOrden(e.target.value)}
+                    className="h-8 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                  >
+                    <option value="fecha">Fecha</option>
+                    <option value="puntos">Puntos</option>
+                    <option value="equipo">Equipo</option>
+                    <option value="fase">Fase</option>
+                    <option value="finalizacion">Finalización</option>
+                  </select>
+                  <button
+                    onClick={() => setOrdenDireccion(ordenDireccion === 'asc' ? 'desc' : 'asc')}
+                    className="h-8 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-gray-100 transition"
+                  >
+                    {ordenDireccion === 'asc' ? '↑' : '↓'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* NIVEL 3: Filtros Avanzados */}
+          <div className="p-2">
+            <button
+              onClick={() => setMostrarAvanzados(!mostrarAvanzados)}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg transition"
+            >
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Filter className="h-4 w-4" />
+                <span>Filtros avanzados</span>
+                {[filtrosAvanzados.soloConPuntos, filtrosAvanzados.ocultarFallos, 
+                  filtrosAvanzados.mostrarEmpates, !!filtrosAvanzados.fechaDesde, 
+                  !!filtrosAvanzados.fechaHasta, filtrosAvanzados.rangoPuntos[1] < 100]
+                  .some(v => v) && (
+                  <span className="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded text-xs font-medium">
+                    Activos
+                  </span>
+                )}
+              </div>
+              {mostrarAvanzados ? (
+                <ChevronUp className="h-4 w-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+
+            {mostrarAvanzados && (
+              <div className="px-3 pb-3 pt-1 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
+                      <input
+                        type="checkbox"
+                        checked={filtrosAvanzados.soloConPuntos}
+                        onChange={(e) => setFiltrosAvanzados({
+                          ...filtrosAvanzados,
+                          soloConPuntos: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Solo partidos con puntos
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
+                      <input
+                        type="checkbox"
+                        checked={filtrosAvanzados.ocultarFallos}
+                        onChange={(e) => setFiltrosAvanzados({
+                          ...filtrosAvanzados,
+                          ocultarFallos: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Ocultar fallos
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
+                      <input
+                        type="checkbox"
+                        checked={filtrosAvanzados.mostrarEmpates}
+                        onChange={(e) => setFiltrosAvanzados({
+                          ...filtrosAvanzados,
+                          mostrarEmpates: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Mostrar empates
+                    </label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-600">Rango de fechas</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="date"
+                        className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+                        value={filtrosAvanzados.fechaDesde || ''}
+                        onChange={(e) => setFiltrosAvanzados({
+                          ...filtrosAvanzados,
+                          fechaDesde: e.target.value
+                        })}
+                      />
+                      <span className="text-gray-400 self-center hidden sm:block">→</span>
+                      <input
+                        type="date"
+                        className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+                        value={filtrosAvanzados.fechaHasta || ''}
+                        onChange={(e) => setFiltrosAvanzados({
+                          ...filtrosAvanzados,
+                          fechaHasta: e.target.value
+                        })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <label>Rango de puntos</label>
+                      <span>0 - {filtrosAvanzados.rangoPuntos[1]}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={filtrosAvanzados.rangoPuntos[1]}
+                      onChange={(e) => setFiltrosAvanzados({
+                        ...filtrosAvanzados,
+                        rangoPuntos: [0, parseInt(e.target.value)]
+                      })}
+                      className="w-full accent-indigo-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ==========================================
           TABLA DE PARTIDOS
